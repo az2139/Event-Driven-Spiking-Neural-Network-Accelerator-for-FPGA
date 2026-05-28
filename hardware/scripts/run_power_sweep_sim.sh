@@ -10,7 +10,7 @@ RTL_DIR="$PROJ_ROOT/hardware/hdl/rtl"
 SIM_DIR="$PROJ_ROOT/hardware/sim"
 WORK_DIR="$PROJ_ROOT/hardware/sim_work_power"
 
-source /tools/Xilinx/2025.2/Vivado/settings64.sh
+source /xilinx/2025.2/Vivado/settings64.sh
 
 mkdir -p "$WORK_DIR"
 cd "$WORK_DIR"

@@ -98,7 +98,7 @@ if command -v v++ &> /dev/null; then
     log_info "v++ compiler found: ${VPP_VER}"
 else
     log_error "v++ compiler NOT found"
-    echo "  Run: source /tools/Xilinx/2025.2/Vitis/settings64.sh"
+    echo "  Run: source /xilinx/2025.2/Vitis/settings64.sh"
     exit 1
 fi
 
@@ -108,7 +108,7 @@ if command -v vivado &> /dev/null; then
     log_info "Vivado found: ${VIVADO_VER}"
 else
     log_error "Vivado NOT found"
-    echo "  Run: source /tools/Xilinx/2025.2/Vivado/settings64.sh"
+    echo "  Run: source /xilinx/2025.2/Vivado/settings64.sh"
     exit 1
 fi
 

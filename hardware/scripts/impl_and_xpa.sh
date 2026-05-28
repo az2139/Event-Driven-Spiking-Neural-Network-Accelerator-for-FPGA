@@ -5,7 +5,7 @@
 
 set -e
 
-source /tools/Xilinx/2025.2/Vivado/settings64.sh
+source /xilinx/2025.2/Vivado/settings64.sh
 
 PROJ_ROOT="/mnt/workspace/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA"
 REBUILD_TCL="$PROJ_ROOT/hardware/scripts/rebuild_integrated.tcl"

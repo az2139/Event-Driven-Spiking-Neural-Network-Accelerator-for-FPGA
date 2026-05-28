@@ -12,7 +12,7 @@ TB_DIR="$PROJ_ROOT/hardware/hdl/tb"
 WORK_DIR="$PROJ_ROOT/hardware/sim_work"
 INC_DIR="$PROJ_ROOT/config/generated"
 
-source /tools/Xilinx/2025.2/Vivado/settings64.sh
+source /xilinx/2025.2/Vivado/settings64.sh
 
 mkdir -p "$WORK_DIR"
 cd "$WORK_DIR"

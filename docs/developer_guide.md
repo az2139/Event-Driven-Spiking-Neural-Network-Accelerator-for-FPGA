@@ -25,7 +25,7 @@ pip install -e .
 pip install pytest pytest-cov black flake8 mypy
 
 # Vivado tools
-source ~/tools/2025.2/Vivado/settings64.sh
+source /xilinx/2025.2/Vivado/settings64.sh
 export LC_ALL=en_US.UTF-8
 ```
 
@@ -70,7 +70,7 @@ cd hardware/hls
 
 ```bash
 cd hardware/scripts
-source ~/tools/2025.2/Vivado/settings64.sh
+source /xilinx/2025.2/Vivado/settings64.sh
 export LC_ALL=en_US.UTF-8
 vivado -mode batch -source synth_core_group.tcl
 ```

@@ -87,8 +87,8 @@ pip install pytest pytest-cov black flake8 mypy
 #### Hardware Environment
 ```bash
 # Source Xilinx tools (Vitis 2025.2+)
-source /tools/Xilinx/2025.2/Vivado/settings64.sh
-source /tools/Xilinx/2025.2/Vitis/settings64.sh
+source /xilinx/2025.2/Vivado/settings64.sh
+source /xilinx/2025.2/Vitis/settings64.sh
 ```
 
 > **Note**: Vitis 2025.2 uses `v++` CLI for HLS. Legacy `vitis_hls -f script.tcl` is deprecated.
