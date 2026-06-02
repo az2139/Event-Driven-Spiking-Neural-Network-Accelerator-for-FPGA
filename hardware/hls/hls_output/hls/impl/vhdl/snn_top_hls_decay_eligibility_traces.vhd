@@ -16,62 +16,20 @@ port (
     ap_done : OUT STD_LOGIC;
     ap_idle : OUT STD_LOGIC;
     ap_ready : OUT STD_LOGIC;
-    p_ZL15pre_eligibility_0_address0 : OUT STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL15pre_eligibility_0_ce0 : OUT STD_LOGIC;
-    p_ZL15pre_eligibility_0_q0 : IN STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL15pre_eligibility_0_address1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL15pre_eligibility_0_ce1 : OUT STD_LOGIC;
-    p_ZL15pre_eligibility_0_we1 : OUT STD_LOGIC;
-    p_ZL15pre_eligibility_0_d1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL15pre_eligibility_1_address0 : OUT STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL15pre_eligibility_1_ce0 : OUT STD_LOGIC;
-    p_ZL15pre_eligibility_1_q0 : IN STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL15pre_eligibility_1_address1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL15pre_eligibility_1_ce1 : OUT STD_LOGIC;
-    p_ZL15pre_eligibility_1_we1 : OUT STD_LOGIC;
-    p_ZL15pre_eligibility_1_d1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL15pre_eligibility_2_address0 : OUT STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL15pre_eligibility_2_ce0 : OUT STD_LOGIC;
-    p_ZL15pre_eligibility_2_q0 : IN STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL15pre_eligibility_2_address1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL15pre_eligibility_2_ce1 : OUT STD_LOGIC;
-    p_ZL15pre_eligibility_2_we1 : OUT STD_LOGIC;
-    p_ZL15pre_eligibility_2_d1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL15pre_eligibility_3_address0 : OUT STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL15pre_eligibility_3_ce0 : OUT STD_LOGIC;
-    p_ZL15pre_eligibility_3_q0 : IN STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL15pre_eligibility_3_address1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL15pre_eligibility_3_ce1 : OUT STD_LOGIC;
-    p_ZL15pre_eligibility_3_we1 : OUT STD_LOGIC;
-    p_ZL15pre_eligibility_3_d1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL16post_eligibility_0_address0 : OUT STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL16post_eligibility_0_ce0 : OUT STD_LOGIC;
-    p_ZL16post_eligibility_0_q0 : IN STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL16post_eligibility_0_address1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL16post_eligibility_0_ce1 : OUT STD_LOGIC;
-    p_ZL16post_eligibility_0_we1 : OUT STD_LOGIC;
-    p_ZL16post_eligibility_0_d1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL16post_eligibility_1_address0 : OUT STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL16post_eligibility_1_ce0 : OUT STD_LOGIC;
-    p_ZL16post_eligibility_1_q0 : IN STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL16post_eligibility_1_address1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL16post_eligibility_1_ce1 : OUT STD_LOGIC;
-    p_ZL16post_eligibility_1_we1 : OUT STD_LOGIC;
-    p_ZL16post_eligibility_1_d1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL16post_eligibility_2_address0 : OUT STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL16post_eligibility_2_ce0 : OUT STD_LOGIC;
-    p_ZL16post_eligibility_2_q0 : IN STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL16post_eligibility_2_address1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL16post_eligibility_2_ce1 : OUT STD_LOGIC;
-    p_ZL16post_eligibility_2_we1 : OUT STD_LOGIC;
-    p_ZL16post_eligibility_2_d1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL16post_eligibility_3_address0 : OUT STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL16post_eligibility_3_ce0 : OUT STD_LOGIC;
-    p_ZL16post_eligibility_3_q0 : IN STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL16post_eligibility_3_address1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-    p_ZL16post_eligibility_3_ce1 : OUT STD_LOGIC;
-    p_ZL16post_eligibility_3_we1 : OUT STD_LOGIC;
-    p_ZL16post_eligibility_3_d1 : OUT STD_LOGIC_VECTOR (7 downto 0) );
+    pre_eligibility_address0 : OUT STD_LOGIC_VECTOR (12 downto 0);
+    pre_eligibility_ce0 : OUT STD_LOGIC;
+    pre_eligibility_q0 : IN STD_LOGIC_VECTOR (7 downto 0);
+    pre_eligibility_address1 : OUT STD_LOGIC_VECTOR (12 downto 0);
+    pre_eligibility_ce1 : OUT STD_LOGIC;
+    pre_eligibility_we1 : OUT STD_LOGIC;
+    pre_eligibility_d1 : OUT STD_LOGIC_VECTOR (7 downto 0);
+    post_eligibility_address0 : OUT STD_LOGIC_VECTOR (12 downto 0);
+    post_eligibility_ce0 : OUT STD_LOGIC;
+    post_eligibility_q0 : IN STD_LOGIC_VECTOR (7 downto 0);
+    post_eligibility_address1 : OUT STD_LOGIC_VECTOR (12 downto 0);
+    post_eligibility_ce1 : OUT STD_LOGIC;
+    post_eligibility_we1 : OUT STD_LOGIC;
+    post_eligibility_d1 : OUT STD_LOGIC_VECTOR (7 downto 0) );
 end;
 
 
@@ -93,66 +51,30 @@ attribute shreg_extract : string;
     attribute fsm_encoding of ap_CS_fsm : signal is "none";
     signal ap_CS_fsm_state1 : STD_LOGIC;
     attribute fsm_encoding of ap_CS_fsm_state1 : signal is "none";
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_ap_start : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_ap_done : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_ap_idle : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_ap_ready : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_0_address0 : STD_LOGIC_VECTOR (7 downto 0);
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_0_ce0 : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_0_address1 : STD_LOGIC_VECTOR (7 downto 0);
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_0_ce1 : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_0_we1 : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_0_d1 : STD_LOGIC_VECTOR (7 downto 0);
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_1_address0 : STD_LOGIC_VECTOR (7 downto 0);
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_1_ce0 : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_1_address1 : STD_LOGIC_VECTOR (7 downto 0);
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_1_ce1 : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_1_we1 : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_1_d1 : STD_LOGIC_VECTOR (7 downto 0);
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_2_address0 : STD_LOGIC_VECTOR (7 downto 0);
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_2_ce0 : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_2_address1 : STD_LOGIC_VECTOR (7 downto 0);
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_2_ce1 : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_2_we1 : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_2_d1 : STD_LOGIC_VECTOR (7 downto 0);
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_3_address0 : STD_LOGIC_VECTOR (7 downto 0);
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_3_ce0 : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_3_address1 : STD_LOGIC_VECTOR (7 downto 0);
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_3_ce1 : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_3_we1 : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_3_d1 : STD_LOGIC_VECTOR (7 downto 0);
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_ap_start : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_ap_done : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_ap_idle : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_ap_ready : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_0_address0 : STD_LOGIC_VECTOR (7 downto 0);
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_0_ce0 : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_0_address1 : STD_LOGIC_VECTOR (7 downto 0);
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_0_ce1 : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_0_we1 : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_0_d1 : STD_LOGIC_VECTOR (7 downto 0);
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_1_address0 : STD_LOGIC_VECTOR (7 downto 0);
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_1_ce0 : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_1_address1 : STD_LOGIC_VECTOR (7 downto 0);
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_1_ce1 : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_1_we1 : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_1_d1 : STD_LOGIC_VECTOR (7 downto 0);
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_2_address0 : STD_LOGIC_VECTOR (7 downto 0);
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_2_ce0 : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_2_address1 : STD_LOGIC_VECTOR (7 downto 0);
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_2_ce1 : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_2_we1 : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_2_d1 : STD_LOGIC_VECTOR (7 downto 0);
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_3_address0 : STD_LOGIC_VECTOR (7 downto 0);
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_3_ce0 : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_3_address1 : STD_LOGIC_VECTOR (7 downto 0);
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_3_ce1 : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_3_we1 : STD_LOGIC;
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_3_d1 : STD_LOGIC_VECTOR (7 downto 0);
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_ap_start_reg : STD_LOGIC := '0';
+    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_ap_start : STD_LOGIC;
+    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_ap_done : STD_LOGIC;
+    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_ap_idle : STD_LOGIC;
+    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_ap_ready : STD_LOGIC;
+    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_pre_eligibility_address0 : STD_LOGIC_VECTOR (12 downto 0);
+    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_pre_eligibility_ce0 : STD_LOGIC;
+    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_pre_eligibility_address1 : STD_LOGIC_VECTOR (12 downto 0);
+    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_pre_eligibility_ce1 : STD_LOGIC;
+    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_pre_eligibility_we1 : STD_LOGIC;
+    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_pre_eligibility_d1 : STD_LOGIC_VECTOR (7 downto 0);
+    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_ap_start : STD_LOGIC;
+    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_ap_done : STD_LOGIC;
+    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_ap_idle : STD_LOGIC;
+    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_ap_ready : STD_LOGIC;
+    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_post_eligibility_address0 : STD_LOGIC_VECTOR (12 downto 0);
+    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_post_eligibility_ce0 : STD_LOGIC;
+    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_post_eligibility_address1 : STD_LOGIC_VECTOR (12 downto 0);
+    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_post_eligibility_ce1 : STD_LOGIC;
+    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_post_eligibility_we1 : STD_LOGIC;
+    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_post_eligibility_d1 : STD_LOGIC_VECTOR (7 downto 0);
+    signal grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_ap_start_reg : STD_LOGIC := '0';
     signal ap_CS_fsm_state2 : STD_LOGIC;
     attribute fsm_encoding of ap_CS_fsm_state2 : signal is "none";
-    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_ap_start_reg : STD_LOGIC := '0';
+    signal grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_ap_start_reg : STD_LOGIC := '0';
     signal ap_block_state2_on_subcall_done : BOOLEAN;
     signal ap_NS_fsm : STD_LOGIC_VECTOR (1 downto 0);
     signal ap_ST_fsm_state1_blk : STD_LOGIC;
@@ -167,34 +89,13 @@ attribute shreg_extract : string;
         ap_done : OUT STD_LOGIC;
         ap_idle : OUT STD_LOGIC;
         ap_ready : OUT STD_LOGIC;
-        p_ZL15pre_eligibility_0_address0 : OUT STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL15pre_eligibility_0_ce0 : OUT STD_LOGIC;
-        p_ZL15pre_eligibility_0_q0 : IN STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL15pre_eligibility_0_address1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL15pre_eligibility_0_ce1 : OUT STD_LOGIC;
-        p_ZL15pre_eligibility_0_we1 : OUT STD_LOGIC;
-        p_ZL15pre_eligibility_0_d1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL15pre_eligibility_1_address0 : OUT STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL15pre_eligibility_1_ce0 : OUT STD_LOGIC;
-        p_ZL15pre_eligibility_1_q0 : IN STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL15pre_eligibility_1_address1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL15pre_eligibility_1_ce1 : OUT STD_LOGIC;
-        p_ZL15pre_eligibility_1_we1 : OUT STD_LOGIC;
-        p_ZL15pre_eligibility_1_d1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL15pre_eligibility_2_address0 : OUT STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL15pre_eligibility_2_ce0 : OUT STD_LOGIC;
-        p_ZL15pre_eligibility_2_q0 : IN STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL15pre_eligibility_2_address1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL15pre_eligibility_2_ce1 : OUT STD_LOGIC;
-        p_ZL15pre_eligibility_2_we1 : OUT STD_LOGIC;
-        p_ZL15pre_eligibility_2_d1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL15pre_eligibility_3_address0 : OUT STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL15pre_eligibility_3_ce0 : OUT STD_LOGIC;
-        p_ZL15pre_eligibility_3_q0 : IN STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL15pre_eligibility_3_address1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL15pre_eligibility_3_ce1 : OUT STD_LOGIC;
-        p_ZL15pre_eligibility_3_we1 : OUT STD_LOGIC;
-        p_ZL15pre_eligibility_3_d1 : OUT STD_LOGIC_VECTOR (7 downto 0) );
+        pre_eligibility_address0 : OUT STD_LOGIC_VECTOR (12 downto 0);
+        pre_eligibility_ce0 : OUT STD_LOGIC;
+        pre_eligibility_q0 : IN STD_LOGIC_VECTOR (7 downto 0);
+        pre_eligibility_address1 : OUT STD_LOGIC_VECTOR (12 downto 0);
+        pre_eligibility_ce1 : OUT STD_LOGIC;
+        pre_eligibility_we1 : OUT STD_LOGIC;
+        pre_eligibility_d1 : OUT STD_LOGIC_VECTOR (7 downto 0) );
     end component;
 
 
@@ -206,112 +107,49 @@ attribute shreg_extract : string;
         ap_done : OUT STD_LOGIC;
         ap_idle : OUT STD_LOGIC;
         ap_ready : OUT STD_LOGIC;
-        p_ZL16post_eligibility_0_address0 : OUT STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL16post_eligibility_0_ce0 : OUT STD_LOGIC;
-        p_ZL16post_eligibility_0_q0 : IN STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL16post_eligibility_0_address1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL16post_eligibility_0_ce1 : OUT STD_LOGIC;
-        p_ZL16post_eligibility_0_we1 : OUT STD_LOGIC;
-        p_ZL16post_eligibility_0_d1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL16post_eligibility_1_address0 : OUT STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL16post_eligibility_1_ce0 : OUT STD_LOGIC;
-        p_ZL16post_eligibility_1_q0 : IN STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL16post_eligibility_1_address1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL16post_eligibility_1_ce1 : OUT STD_LOGIC;
-        p_ZL16post_eligibility_1_we1 : OUT STD_LOGIC;
-        p_ZL16post_eligibility_1_d1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL16post_eligibility_2_address0 : OUT STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL16post_eligibility_2_ce0 : OUT STD_LOGIC;
-        p_ZL16post_eligibility_2_q0 : IN STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL16post_eligibility_2_address1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL16post_eligibility_2_ce1 : OUT STD_LOGIC;
-        p_ZL16post_eligibility_2_we1 : OUT STD_LOGIC;
-        p_ZL16post_eligibility_2_d1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL16post_eligibility_3_address0 : OUT STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL16post_eligibility_3_ce0 : OUT STD_LOGIC;
-        p_ZL16post_eligibility_3_q0 : IN STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL16post_eligibility_3_address1 : OUT STD_LOGIC_VECTOR (7 downto 0);
-        p_ZL16post_eligibility_3_ce1 : OUT STD_LOGIC;
-        p_ZL16post_eligibility_3_we1 : OUT STD_LOGIC;
-        p_ZL16post_eligibility_3_d1 : OUT STD_LOGIC_VECTOR (7 downto 0) );
+        post_eligibility_address0 : OUT STD_LOGIC_VECTOR (12 downto 0);
+        post_eligibility_ce0 : OUT STD_LOGIC;
+        post_eligibility_q0 : IN STD_LOGIC_VECTOR (7 downto 0);
+        post_eligibility_address1 : OUT STD_LOGIC_VECTOR (12 downto 0);
+        post_eligibility_ce1 : OUT STD_LOGIC;
+        post_eligibility_we1 : OUT STD_LOGIC;
+        post_eligibility_d1 : OUT STD_LOGIC_VECTOR (7 downto 0) );
     end component;
 
 
 
 begin
-    grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30 : component snn_top_hls_decay_eligibility_traces_Pipeline_DECAY_PRE
+    grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18 : component snn_top_hls_decay_eligibility_traces_Pipeline_DECAY_PRE
     port map (
         ap_clk => ap_clk,
         ap_rst => ap_rst,
-        ap_start => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_ap_start,
-        ap_done => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_ap_done,
-        ap_idle => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_ap_idle,
-        ap_ready => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_ap_ready,
-        p_ZL15pre_eligibility_0_address0 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_0_address0,
-        p_ZL15pre_eligibility_0_ce0 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_0_ce0,
-        p_ZL15pre_eligibility_0_q0 => p_ZL15pre_eligibility_0_q0,
-        p_ZL15pre_eligibility_0_address1 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_0_address1,
-        p_ZL15pre_eligibility_0_ce1 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_0_ce1,
-        p_ZL15pre_eligibility_0_we1 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_0_we1,
-        p_ZL15pre_eligibility_0_d1 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_0_d1,
-        p_ZL15pre_eligibility_1_address0 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_1_address0,
-        p_ZL15pre_eligibility_1_ce0 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_1_ce0,
-        p_ZL15pre_eligibility_1_q0 => p_ZL15pre_eligibility_1_q0,
-        p_ZL15pre_eligibility_1_address1 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_1_address1,
-        p_ZL15pre_eligibility_1_ce1 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_1_ce1,
-        p_ZL15pre_eligibility_1_we1 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_1_we1,
-        p_ZL15pre_eligibility_1_d1 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_1_d1,
-        p_ZL15pre_eligibility_2_address0 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_2_address0,
-        p_ZL15pre_eligibility_2_ce0 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_2_ce0,
-        p_ZL15pre_eligibility_2_q0 => p_ZL15pre_eligibility_2_q0,
-        p_ZL15pre_eligibility_2_address1 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_2_address1,
-        p_ZL15pre_eligibility_2_ce1 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_2_ce1,
-        p_ZL15pre_eligibility_2_we1 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_2_we1,
-        p_ZL15pre_eligibility_2_d1 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_2_d1,
-        p_ZL15pre_eligibility_3_address0 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_3_address0,
-        p_ZL15pre_eligibility_3_ce0 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_3_ce0,
-        p_ZL15pre_eligibility_3_q0 => p_ZL15pre_eligibility_3_q0,
-        p_ZL15pre_eligibility_3_address1 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_3_address1,
-        p_ZL15pre_eligibility_3_ce1 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_3_ce1,
-        p_ZL15pre_eligibility_3_we1 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_3_we1,
-        p_ZL15pre_eligibility_3_d1 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_3_d1);
+        ap_start => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_ap_start,
+        ap_done => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_ap_done,
+        ap_idle => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_ap_idle,
+        ap_ready => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_ap_ready,
+        pre_eligibility_address0 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_pre_eligibility_address0,
+        pre_eligibility_ce0 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_pre_eligibility_ce0,
+        pre_eligibility_q0 => pre_eligibility_q0,
+        pre_eligibility_address1 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_pre_eligibility_address1,
+        pre_eligibility_ce1 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_pre_eligibility_ce1,
+        pre_eligibility_we1 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_pre_eligibility_we1,
+        pre_eligibility_d1 => grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_pre_eligibility_d1);
 
-    grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42 : component snn_top_hls_decay_eligibility_traces_Pipeline_DECAY_POST
+    grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24 : component snn_top_hls_decay_eligibility_traces_Pipeline_DECAY_POST
     port map (
         ap_clk => ap_clk,
         ap_rst => ap_rst,
-        ap_start => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_ap_start,
-        ap_done => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_ap_done,
-        ap_idle => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_ap_idle,
-        ap_ready => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_ap_ready,
-        p_ZL16post_eligibility_0_address0 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_0_address0,
-        p_ZL16post_eligibility_0_ce0 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_0_ce0,
-        p_ZL16post_eligibility_0_q0 => p_ZL16post_eligibility_0_q0,
-        p_ZL16post_eligibility_0_address1 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_0_address1,
-        p_ZL16post_eligibility_0_ce1 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_0_ce1,
-        p_ZL16post_eligibility_0_we1 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_0_we1,
-        p_ZL16post_eligibility_0_d1 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_0_d1,
-        p_ZL16post_eligibility_1_address0 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_1_address0,
-        p_ZL16post_eligibility_1_ce0 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_1_ce0,
-        p_ZL16post_eligibility_1_q0 => p_ZL16post_eligibility_1_q0,
-        p_ZL16post_eligibility_1_address1 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_1_address1,
-        p_ZL16post_eligibility_1_ce1 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_1_ce1,
-        p_ZL16post_eligibility_1_we1 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_1_we1,
-        p_ZL16post_eligibility_1_d1 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_1_d1,
-        p_ZL16post_eligibility_2_address0 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_2_address0,
-        p_ZL16post_eligibility_2_ce0 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_2_ce0,
-        p_ZL16post_eligibility_2_q0 => p_ZL16post_eligibility_2_q0,
-        p_ZL16post_eligibility_2_address1 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_2_address1,
-        p_ZL16post_eligibility_2_ce1 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_2_ce1,
-        p_ZL16post_eligibility_2_we1 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_2_we1,
-        p_ZL16post_eligibility_2_d1 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_2_d1,
-        p_ZL16post_eligibility_3_address0 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_3_address0,
-        p_ZL16post_eligibility_3_ce0 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_3_ce0,
-        p_ZL16post_eligibility_3_q0 => p_ZL16post_eligibility_3_q0,
-        p_ZL16post_eligibility_3_address1 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_3_address1,
-        p_ZL16post_eligibility_3_ce1 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_3_ce1,
-        p_ZL16post_eligibility_3_we1 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_3_we1,
-        p_ZL16post_eligibility_3_d1 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_3_d1);
+        ap_start => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_ap_start,
+        ap_done => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_ap_done,
+        ap_idle => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_ap_idle,
+        ap_ready => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_ap_ready,
+        post_eligibility_address0 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_post_eligibility_address0,
+        post_eligibility_ce0 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_post_eligibility_ce0,
+        post_eligibility_q0 => post_eligibility_q0,
+        post_eligibility_address1 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_post_eligibility_address1,
+        post_eligibility_ce1 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_post_eligibility_ce1,
+        post_eligibility_we1 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_post_eligibility_we1,
+        post_eligibility_d1 => grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_post_eligibility_d1);
 
 
 
@@ -329,32 +167,32 @@ begin
     end process;
 
 
-    grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_ap_start_reg_assign_proc : process(ap_clk)
+    grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_ap_start_reg_assign_proc : process(ap_clk)
     begin
         if (ap_clk'event and ap_clk =  '1') then
             if (ap_rst = '1') then
-                grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_ap_start_reg <= ap_const_logic_0;
+                grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_ap_start_reg <= ap_const_logic_0;
             else
                 if (((ap_start = ap_const_logic_1) and (ap_const_logic_1 = ap_CS_fsm_state1))) then 
-                    grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_ap_start_reg <= ap_const_logic_1;
-                elsif ((grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_ap_ready = ap_const_logic_1)) then 
-                    grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_ap_start_reg <= ap_const_logic_0;
+                    grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_ap_start_reg <= ap_const_logic_1;
+                elsif ((grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_ap_ready = ap_const_logic_1)) then 
+                    grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_ap_start_reg <= ap_const_logic_0;
                 end if; 
             end if;
         end if;
     end process;
 
 
-    grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_ap_start_reg_assign_proc : process(ap_clk)
+    grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_ap_start_reg_assign_proc : process(ap_clk)
     begin
         if (ap_clk'event and ap_clk =  '1') then
             if (ap_rst = '1') then
-                grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_ap_start_reg <= ap_const_logic_0;
+                grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_ap_start_reg <= ap_const_logic_0;
             else
                 if (((ap_start = ap_const_logic_1) and (ap_const_logic_1 = ap_CS_fsm_state1))) then 
-                    grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_ap_start_reg <= ap_const_logic_1;
-                elsif ((grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_ap_ready = ap_const_logic_1)) then 
-                    grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_ap_start_reg <= ap_const_logic_0;
+                    grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_ap_start_reg <= ap_const_logic_1;
+                elsif ((grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_ap_ready = ap_const_logic_1)) then 
+                    grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_ap_start_reg <= ap_const_logic_0;
                 end if; 
             end if;
         end if;
@@ -371,7 +209,7 @@ begin
                     ap_NS_fsm <= ap_ST_fsm_state1;
                 end if;
             when ap_ST_fsm_state2 => 
-                if (((ap_const_boolean_0 = ap_block_state2_on_subcall_done) and (ap_const_logic_1 = ap_CS_fsm_state2))) then
+                if (((ap_const_logic_1 = ap_CS_fsm_state2) and (ap_const_boolean_0 = ap_block_state2_on_subcall_done))) then
                     ap_NS_fsm <= ap_ST_fsm_state1;
                 else
                     ap_NS_fsm <= ap_ST_fsm_state2;
@@ -403,15 +241,15 @@ begin
     end process;
 
 
-    ap_block_state2_on_subcall_done_assign_proc : process(grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_ap_done, grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_ap_done)
+    ap_block_state2_on_subcall_done_assign_proc : process(grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_ap_done, grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_ap_done)
     begin
-                ap_block_state2_on_subcall_done <= ((grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_ap_done = ap_const_logic_0) or (grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_ap_done = ap_const_logic_0));
+                ap_block_state2_on_subcall_done <= ((grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_ap_done = ap_const_logic_0) or (grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_ap_done = ap_const_logic_0));
     end process;
 
 
     ap_done_assign_proc : process(ap_start, ap_CS_fsm_state1, ap_CS_fsm_state2, ap_block_state2_on_subcall_done)
     begin
-        if ((((ap_start = ap_const_logic_0) and (ap_const_logic_1 = ap_CS_fsm_state1)) or ((ap_const_boolean_0 = ap_block_state2_on_subcall_done) and (ap_const_logic_1 = ap_CS_fsm_state2)))) then 
+        if ((((ap_start = ap_const_logic_0) and (ap_const_logic_1 = ap_CS_fsm_state1)) or ((ap_const_logic_1 = ap_CS_fsm_state2) and (ap_const_boolean_0 = ap_block_state2_on_subcall_done)))) then 
             ap_done <= ap_const_logic_1;
         else 
             ap_done <= ap_const_logic_0;
@@ -431,61 +269,25 @@ begin
 
     ap_ready_assign_proc : process(ap_CS_fsm_state2, ap_block_state2_on_subcall_done)
     begin
-        if (((ap_const_boolean_0 = ap_block_state2_on_subcall_done) and (ap_const_logic_1 = ap_CS_fsm_state2))) then 
+        if (((ap_const_logic_1 = ap_CS_fsm_state2) and (ap_const_boolean_0 = ap_block_state2_on_subcall_done))) then 
             ap_ready <= ap_const_logic_1;
         else 
             ap_ready <= ap_const_logic_0;
         end if; 
     end process;
 
-    grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_ap_start <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_ap_start_reg;
-    grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_ap_start <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_ap_start_reg;
-    p_ZL15pre_eligibility_0_address0 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_0_address0;
-    p_ZL15pre_eligibility_0_address1 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_0_address1;
-    p_ZL15pre_eligibility_0_ce0 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_0_ce0;
-    p_ZL15pre_eligibility_0_ce1 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_0_ce1;
-    p_ZL15pre_eligibility_0_d1 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_0_d1;
-    p_ZL15pre_eligibility_0_we1 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_0_we1;
-    p_ZL15pre_eligibility_1_address0 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_1_address0;
-    p_ZL15pre_eligibility_1_address1 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_1_address1;
-    p_ZL15pre_eligibility_1_ce0 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_1_ce0;
-    p_ZL15pre_eligibility_1_ce1 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_1_ce1;
-    p_ZL15pre_eligibility_1_d1 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_1_d1;
-    p_ZL15pre_eligibility_1_we1 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_1_we1;
-    p_ZL15pre_eligibility_2_address0 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_2_address0;
-    p_ZL15pre_eligibility_2_address1 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_2_address1;
-    p_ZL15pre_eligibility_2_ce0 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_2_ce0;
-    p_ZL15pre_eligibility_2_ce1 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_2_ce1;
-    p_ZL15pre_eligibility_2_d1 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_2_d1;
-    p_ZL15pre_eligibility_2_we1 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_2_we1;
-    p_ZL15pre_eligibility_3_address0 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_3_address0;
-    p_ZL15pre_eligibility_3_address1 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_3_address1;
-    p_ZL15pre_eligibility_3_ce0 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_3_ce0;
-    p_ZL15pre_eligibility_3_ce1 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_3_ce1;
-    p_ZL15pre_eligibility_3_d1 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_3_d1;
-    p_ZL15pre_eligibility_3_we1 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_p_ZL15pre_eligibility_3_we1;
-    p_ZL16post_eligibility_0_address0 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_0_address0;
-    p_ZL16post_eligibility_0_address1 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_0_address1;
-    p_ZL16post_eligibility_0_ce0 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_0_ce0;
-    p_ZL16post_eligibility_0_ce1 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_0_ce1;
-    p_ZL16post_eligibility_0_d1 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_0_d1;
-    p_ZL16post_eligibility_0_we1 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_0_we1;
-    p_ZL16post_eligibility_1_address0 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_1_address0;
-    p_ZL16post_eligibility_1_address1 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_1_address1;
-    p_ZL16post_eligibility_1_ce0 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_1_ce0;
-    p_ZL16post_eligibility_1_ce1 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_1_ce1;
-    p_ZL16post_eligibility_1_d1 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_1_d1;
-    p_ZL16post_eligibility_1_we1 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_1_we1;
-    p_ZL16post_eligibility_2_address0 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_2_address0;
-    p_ZL16post_eligibility_2_address1 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_2_address1;
-    p_ZL16post_eligibility_2_ce0 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_2_ce0;
-    p_ZL16post_eligibility_2_ce1 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_2_ce1;
-    p_ZL16post_eligibility_2_d1 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_2_d1;
-    p_ZL16post_eligibility_2_we1 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_2_we1;
-    p_ZL16post_eligibility_3_address0 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_3_address0;
-    p_ZL16post_eligibility_3_address1 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_3_address1;
-    p_ZL16post_eligibility_3_ce0 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_3_ce0;
-    p_ZL16post_eligibility_3_ce1 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_3_ce1;
-    p_ZL16post_eligibility_3_d1 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_3_d1;
-    p_ZL16post_eligibility_3_we1 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_p_ZL16post_eligibility_3_we1;
+    grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_ap_start <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_ap_start_reg;
+    grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_ap_start <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_ap_start_reg;
+    post_eligibility_address0 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_post_eligibility_address0;
+    post_eligibility_address1 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_post_eligibility_address1;
+    post_eligibility_ce0 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_post_eligibility_ce0;
+    post_eligibility_ce1 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_post_eligibility_ce1;
+    post_eligibility_d1 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_post_eligibility_d1;
+    post_eligibility_we1 <= grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_post_eligibility_we1;
+    pre_eligibility_address0 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_pre_eligibility_address0;
+    pre_eligibility_address1 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_pre_eligibility_address1;
+    pre_eligibility_ce0 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_pre_eligibility_ce0;
+    pre_eligibility_ce1 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_pre_eligibility_ce1;
+    pre_eligibility_d1 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_pre_eligibility_d1;
+    pre_eligibility_we1 <= grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_pre_eligibility_we1;
 end behav;

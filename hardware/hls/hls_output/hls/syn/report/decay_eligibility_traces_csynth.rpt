@@ -3,13 +3,13 @@
 ================================================================
 == Vitis HLS Report for 'decay_eligibility_traces'
 ================================================================
-* Date:           Wed Feb 11 07:07:58 2026
+* Date:           Tue Jun  2 11:28:49 2026
 
 * Version:        2025.2 (Build 6295257 on Nov 14 2025)
 * Project:        hls_output
 * Solution:       hls (Vivado IP Flow Target)
 * Product family: zynq
-* Target device:  xc7z020-clg400-1
+* Target device:  xc7z020-clg400-2
 
 
 ================================================================
@@ -20,27 +20,27 @@
     +--------+----------+----------+------------+
     |  Clock |  Target  | Estimated| Uncertainty|
     +--------+----------+----------+------------+
-    |ap_clk  |  10.00 ns|  5.169 ns|     2.70 ns|
+    |ap_clk  |  10.00 ns|  4.816 ns|     2.70 ns|
     +--------+----------+----------+------------+
 
 + Latency: 
     * Summary: 
-    +---------+---------+----------+----------+-----+-----+---------+
-    |  Latency (cycles) |  Latency (absolute) |  Interval | Pipeline|
-    |   min   |   max   |    min   |    max   | min | max |   Type  |
-    +---------+---------+----------+----------+-----+-----+---------+
-    |      260|      260|  2.600 us|  2.600 us|  260|  260|       no|
-    +---------+---------+----------+----------+-----+-----+---------+
+    +---------+---------+-----------+-----------+------+------+---------+
+    |  Latency (cycles) |   Latency (absolute)  |   Interval  | Pipeline|
+    |   min   |   max   |    min    |    max    |  min |  max |   Type  |
+    +---------+---------+-----------+-----------+------+------+---------+
+    |     4893|     4893|  48.930 us|  48.930 us|  4893|  4893|       no|
+    +---------+---------+-----------+-----------+------+------+---------+
 
     + Detail: 
         * Instance: 
-        +--------------------------------------------------------+----------------------------------------------+---------+---------+----------+----------+-----+-----+-------------------+
-        |                                                        |                                              |  Latency (cycles) |  Latency (absolute) |  Interval |      Pipeline     |
-        |                        Instance                        |                    Module                    |   min   |   max   |    min   |    max   | min | max |        Type       |
-        +--------------------------------------------------------+----------------------------------------------+---------+---------+----------+----------+-----+-----+-------------------+
-        |grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30   |decay_eligibility_traces_Pipeline_DECAY_PRE   |      259|      259|  2.590 us|  2.590 us|    0|    0|  loop pipeline stp|
-        |grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42  |decay_eligibility_traces_Pipeline_DECAY_POST  |      259|      259|  2.590 us|  2.590 us|    0|    0|  loop pipeline stp|
-        +--------------------------------------------------------+----------------------------------------------+---------+---------+----------+----------+-----+-----+-------------------+
+        +--------------------------------------------------------+----------------------------------------------+---------+---------+-----------+-----------+-----+-----+-------------------+
+        |                                                        |                                              |  Latency (cycles) |   Latency (absolute)  |  Interval |      Pipeline     |
+        |                        Instance                        |                    Module                    |   min   |   max   |    min    |    max    | min | max |        Type       |
+        +--------------------------------------------------------+----------------------------------------------+---------+---------+-----------+-----------+-----+-----+-------------------+
+        |grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18   |decay_eligibility_traces_Pipeline_DECAY_PRE   |     4892|     4892|  48.920 us|  48.920 us|    0|    0|  loop pipeline stp|
+        |grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24  |decay_eligibility_traces_Pipeline_DECAY_POST  |     4892|     4892|  48.920 us|  48.920 us|    0|    0|  loop pipeline stp|
+        +--------------------------------------------------------+----------------------------------------------+---------+---------+-----------+-----------+-----+-----+-------------------+
 
         * Loop: 
         N/A
@@ -55,14 +55,14 @@
 |       Name      | BRAM_18K| DSP |   FF   |  LUT  | URAM|
 +-----------------+---------+-----+--------+-------+-----+
 |DSP              |        -|    -|       -|      -|    -|
-|Expression       |        -|    -|       0|      2|    -|
+|Expression       |        -|    -|       0|      1|    -|
 |FIFO             |        -|    -|       -|      -|    -|
-|Instance         |        -|    -|     224|    220|    -|
+|Instance         |        -|    -|      58|    144|    -|
 |Memory           |        -|    -|       -|      -|    -|
-|Multiplexer      |        -|    -|       0|     14|    -|
+|Multiplexer      |        -|    -|       0|     13|    -|
 |Register         |        -|    -|       4|      -|    -|
 +-----------------+---------+-----+--------+-------+-----+
-|Total            |        0|    0|     228|    236|    0|
+|Total            |        0|    0|      62|    158|    0|
 +-----------------+---------+-----+--------+-------+-----+
 |Available        |      280|  220|  106400|  53200|    0|
 +-----------------+---------+-----+--------+-------+-----+
@@ -71,14 +71,14 @@
 
 + Detail: 
     * Instance: 
-    +--------------------------------------------------------+----------------------------------------------+---------+----+-----+-----+-----+
-    |                        Instance                        |                    Module                    | BRAM_18K| DSP|  FF | LUT | URAM|
-    +--------------------------------------------------------+----------------------------------------------+---------+----+-----+-----+-----+
-    |grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42  |decay_eligibility_traces_Pipeline_DECAY_POST  |        0|   0|  112|  110|    0|
-    |grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30   |decay_eligibility_traces_Pipeline_DECAY_PRE   |        0|   0|  112|  110|    0|
-    +--------------------------------------------------------+----------------------------------------------+---------+----+-----+-----+-----+
-    |Total                                                   |                                              |        0|   0|  224|  220|    0|
-    +--------------------------------------------------------+----------------------------------------------+---------+----+-----+-----+-----+
+    +--------------------------------------------------------+----------------------------------------------+---------+----+----+----+-----+
+    |                        Instance                        |                    Module                    | BRAM_18K| DSP| FF | LUT| URAM|
+    +--------------------------------------------------------+----------------------------------------------+---------+----+----+----+-----+
+    |grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24  |decay_eligibility_traces_Pipeline_DECAY_POST  |        0|   0|  29|  72|    0|
+    |grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18   |decay_eligibility_traces_Pipeline_DECAY_PRE   |        0|   0|  29|  72|    0|
+    +--------------------------------------------------------+----------------------------------------------+---------+----+----+----+-----+
+    |Total                                                   |                                              |        0|   0|  58| 144|    0|
+    +--------------------------------------------------------+----------------------------------------------+---------+----+----+----+-----+
 
     * DSP: 
     N/A
@@ -93,18 +93,18 @@
     +---------------------------------+----------+----+---+----+------------+------------+
     |          Variable Name          | Operation| DSP| FF| LUT| Bitwidth P0| Bitwidth P1|
     +---------------------------------+----------+----+---+----+------------+------------+
-    |ap_block_state2_on_subcall_done  |        or|   0|  0|   2|           1|           1|
+    |ap_block_state2_on_subcall_done  |        or|   0|  0|   1|           1|           1|
     +---------------------------------+----------+----+---+----+------------+------------+
-    |Total                            |          |   0|  0|   2|           1|           1|
+    |Total                            |          |   0|  0|   1|           1|           1|
     +---------------------------------+----------+----+---+----+------------+------------+
 
     * Multiplexer: 
     +-----------+----+-----------+-----+-----------+
     |    Name   | LUT| Input Size| Bits| Total Bits|
     +-----------+----+-----------+-----+-----------+
-    |ap_NS_fsm  |  14|          3|    1|          3|
+    |ap_NS_fsm  |  13|          3|    1|          3|
     +-----------+----+-----------+-----+-----------+
-    |Total      |  14|          3|    1|          3|
+    |Total      |  13|          3|    1|          3|
     +-----------+----+-----------+-----+-----------+
 
     * Register: 
@@ -112,8 +112,8 @@
     |                                 Name                                | FF| LUT| Bits| Const Bits|
     +---------------------------------------------------------------------+---+----+-----+-----------+
     |ap_CS_fsm                                                            |  2|   0|    2|          0|
-    |grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_42_ap_start_reg  |  1|   0|    1|          0|
-    |grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_30_ap_start_reg   |  1|   0|    1|          0|
+    |grp_decay_eligibility_traces_Pipeline_DECAY_POST_fu_24_ap_start_reg  |  1|   0|    1|          0|
+    |grp_decay_eligibility_traces_Pipeline_DECAY_PRE_fu_18_ap_start_reg   |  1|   0|    1|          0|
     +---------------------------------------------------------------------+---+----+-----+-----------+
     |Total                                                                |  4|   0|    4|          0|
     +---------------------------------------------------------------------+---+----+-----+-----------+
@@ -124,70 +124,28 @@
 == Interface
 ================================================================
 * Summary: 
-+-----------------------------------+-----+-----+------------+--------------------------+--------------+
-|             RTL Ports             | Dir | Bits|  Protocol  |       Source Object      |    C Type    |
-+-----------------------------------+-----+-----+------------+--------------------------+--------------+
-|ap_clk                             |   in|    1|  ap_ctrl_hs|  decay_eligibility_traces|  return value|
-|ap_rst                             |   in|    1|  ap_ctrl_hs|  decay_eligibility_traces|  return value|
-|ap_start                           |   in|    1|  ap_ctrl_hs|  decay_eligibility_traces|  return value|
-|ap_done                            |  out|    1|  ap_ctrl_hs|  decay_eligibility_traces|  return value|
-|ap_idle                            |  out|    1|  ap_ctrl_hs|  decay_eligibility_traces|  return value|
-|ap_ready                           |  out|    1|  ap_ctrl_hs|  decay_eligibility_traces|  return value|
-|p_ZL15pre_eligibility_0_address0   |  out|    8|   ap_memory|   p_ZL15pre_eligibility_0|         array|
-|p_ZL15pre_eligibility_0_ce0        |  out|    1|   ap_memory|   p_ZL15pre_eligibility_0|         array|
-|p_ZL15pre_eligibility_0_q0         |   in|    8|   ap_memory|   p_ZL15pre_eligibility_0|         array|
-|p_ZL15pre_eligibility_0_address1   |  out|    8|   ap_memory|   p_ZL15pre_eligibility_0|         array|
-|p_ZL15pre_eligibility_0_ce1        |  out|    1|   ap_memory|   p_ZL15pre_eligibility_0|         array|
-|p_ZL15pre_eligibility_0_we1        |  out|    1|   ap_memory|   p_ZL15pre_eligibility_0|         array|
-|p_ZL15pre_eligibility_0_d1         |  out|    8|   ap_memory|   p_ZL15pre_eligibility_0|         array|
-|p_ZL15pre_eligibility_1_address0   |  out|    8|   ap_memory|   p_ZL15pre_eligibility_1|         array|
-|p_ZL15pre_eligibility_1_ce0        |  out|    1|   ap_memory|   p_ZL15pre_eligibility_1|         array|
-|p_ZL15pre_eligibility_1_q0         |   in|    8|   ap_memory|   p_ZL15pre_eligibility_1|         array|
-|p_ZL15pre_eligibility_1_address1   |  out|    8|   ap_memory|   p_ZL15pre_eligibility_1|         array|
-|p_ZL15pre_eligibility_1_ce1        |  out|    1|   ap_memory|   p_ZL15pre_eligibility_1|         array|
-|p_ZL15pre_eligibility_1_we1        |  out|    1|   ap_memory|   p_ZL15pre_eligibility_1|         array|
-|p_ZL15pre_eligibility_1_d1         |  out|    8|   ap_memory|   p_ZL15pre_eligibility_1|         array|
-|p_ZL15pre_eligibility_2_address0   |  out|    8|   ap_memory|   p_ZL15pre_eligibility_2|         array|
-|p_ZL15pre_eligibility_2_ce0        |  out|    1|   ap_memory|   p_ZL15pre_eligibility_2|         array|
-|p_ZL15pre_eligibility_2_q0         |   in|    8|   ap_memory|   p_ZL15pre_eligibility_2|         array|
-|p_ZL15pre_eligibility_2_address1   |  out|    8|   ap_memory|   p_ZL15pre_eligibility_2|         array|
-|p_ZL15pre_eligibility_2_ce1        |  out|    1|   ap_memory|   p_ZL15pre_eligibility_2|         array|
-|p_ZL15pre_eligibility_2_we1        |  out|    1|   ap_memory|   p_ZL15pre_eligibility_2|         array|
-|p_ZL15pre_eligibility_2_d1         |  out|    8|   ap_memory|   p_ZL15pre_eligibility_2|         array|
-|p_ZL15pre_eligibility_3_address0   |  out|    8|   ap_memory|   p_ZL15pre_eligibility_3|         array|
-|p_ZL15pre_eligibility_3_ce0        |  out|    1|   ap_memory|   p_ZL15pre_eligibility_3|         array|
-|p_ZL15pre_eligibility_3_q0         |   in|    8|   ap_memory|   p_ZL15pre_eligibility_3|         array|
-|p_ZL15pre_eligibility_3_address1   |  out|    8|   ap_memory|   p_ZL15pre_eligibility_3|         array|
-|p_ZL15pre_eligibility_3_ce1        |  out|    1|   ap_memory|   p_ZL15pre_eligibility_3|         array|
-|p_ZL15pre_eligibility_3_we1        |  out|    1|   ap_memory|   p_ZL15pre_eligibility_3|         array|
-|p_ZL15pre_eligibility_3_d1         |  out|    8|   ap_memory|   p_ZL15pre_eligibility_3|         array|
-|p_ZL16post_eligibility_0_address0  |  out|    8|   ap_memory|  p_ZL16post_eligibility_0|         array|
-|p_ZL16post_eligibility_0_ce0       |  out|    1|   ap_memory|  p_ZL16post_eligibility_0|         array|
-|p_ZL16post_eligibility_0_q0        |   in|    8|   ap_memory|  p_ZL16post_eligibility_0|         array|
-|p_ZL16post_eligibility_0_address1  |  out|    8|   ap_memory|  p_ZL16post_eligibility_0|         array|
-|p_ZL16post_eligibility_0_ce1       |  out|    1|   ap_memory|  p_ZL16post_eligibility_0|         array|
-|p_ZL16post_eligibility_0_we1       |  out|    1|   ap_memory|  p_ZL16post_eligibility_0|         array|
-|p_ZL16post_eligibility_0_d1        |  out|    8|   ap_memory|  p_ZL16post_eligibility_0|         array|
-|p_ZL16post_eligibility_1_address0  |  out|    8|   ap_memory|  p_ZL16post_eligibility_1|         array|
-|p_ZL16post_eligibility_1_ce0       |  out|    1|   ap_memory|  p_ZL16post_eligibility_1|         array|
-|p_ZL16post_eligibility_1_q0        |   in|    8|   ap_memory|  p_ZL16post_eligibility_1|         array|
-|p_ZL16post_eligibility_1_address1  |  out|    8|   ap_memory|  p_ZL16post_eligibility_1|         array|
-|p_ZL16post_eligibility_1_ce1       |  out|    1|   ap_memory|  p_ZL16post_eligibility_1|         array|
-|p_ZL16post_eligibility_1_we1       |  out|    1|   ap_memory|  p_ZL16post_eligibility_1|         array|
-|p_ZL16post_eligibility_1_d1        |  out|    8|   ap_memory|  p_ZL16post_eligibility_1|         array|
-|p_ZL16post_eligibility_2_address0  |  out|    8|   ap_memory|  p_ZL16post_eligibility_2|         array|
-|p_ZL16post_eligibility_2_ce0       |  out|    1|   ap_memory|  p_ZL16post_eligibility_2|         array|
-|p_ZL16post_eligibility_2_q0        |   in|    8|   ap_memory|  p_ZL16post_eligibility_2|         array|
-|p_ZL16post_eligibility_2_address1  |  out|    8|   ap_memory|  p_ZL16post_eligibility_2|         array|
-|p_ZL16post_eligibility_2_ce1       |  out|    1|   ap_memory|  p_ZL16post_eligibility_2|         array|
-|p_ZL16post_eligibility_2_we1       |  out|    1|   ap_memory|  p_ZL16post_eligibility_2|         array|
-|p_ZL16post_eligibility_2_d1        |  out|    8|   ap_memory|  p_ZL16post_eligibility_2|         array|
-|p_ZL16post_eligibility_3_address0  |  out|    8|   ap_memory|  p_ZL16post_eligibility_3|         array|
-|p_ZL16post_eligibility_3_ce0       |  out|    1|   ap_memory|  p_ZL16post_eligibility_3|         array|
-|p_ZL16post_eligibility_3_q0        |   in|    8|   ap_memory|  p_ZL16post_eligibility_3|         array|
-|p_ZL16post_eligibility_3_address1  |  out|    8|   ap_memory|  p_ZL16post_eligibility_3|         array|
-|p_ZL16post_eligibility_3_ce1       |  out|    1|   ap_memory|  p_ZL16post_eligibility_3|         array|
-|p_ZL16post_eligibility_3_we1       |  out|    1|   ap_memory|  p_ZL16post_eligibility_3|         array|
-|p_ZL16post_eligibility_3_d1        |  out|    8|   ap_memory|  p_ZL16post_eligibility_3|         array|
-+-----------------------------------+-----+-----+------------+--------------------------+--------------+
++---------------------------+-----+-----+------------+--------------------------+--------------+
+|         RTL Ports         | Dir | Bits|  Protocol  |       Source Object      |    C Type    |
++---------------------------+-----+-----+------------+--------------------------+--------------+
+|ap_clk                     |   in|    1|  ap_ctrl_hs|  decay_eligibility_traces|  return value|
+|ap_rst                     |   in|    1|  ap_ctrl_hs|  decay_eligibility_traces|  return value|
+|ap_start                   |   in|    1|  ap_ctrl_hs|  decay_eligibility_traces|  return value|
+|ap_done                    |  out|    1|  ap_ctrl_hs|  decay_eligibility_traces|  return value|
+|ap_idle                    |  out|    1|  ap_ctrl_hs|  decay_eligibility_traces|  return value|
+|ap_ready                   |  out|    1|  ap_ctrl_hs|  decay_eligibility_traces|  return value|
+|pre_eligibility_address0   |  out|   13|   ap_memory|           pre_eligibility|         array|
+|pre_eligibility_ce0        |  out|    1|   ap_memory|           pre_eligibility|         array|
+|pre_eligibility_q0         |   in|    8|   ap_memory|           pre_eligibility|         array|
+|pre_eligibility_address1   |  out|   13|   ap_memory|           pre_eligibility|         array|
+|pre_eligibility_ce1        |  out|    1|   ap_memory|           pre_eligibility|         array|
+|pre_eligibility_we1        |  out|    1|   ap_memory|           pre_eligibility|         array|
+|pre_eligibility_d1         |  out|    8|   ap_memory|           pre_eligibility|         array|
+|post_eligibility_address0  |  out|   13|   ap_memory|          post_eligibility|         array|
+|post_eligibility_ce0       |  out|    1|   ap_memory|          post_eligibility|         array|
+|post_eligibility_q0        |   in|    8|   ap_memory|          post_eligibility|         array|
+|post_eligibility_address1  |  out|   13|   ap_memory|          post_eligibility|         array|
+|post_eligibility_ce1       |  out|    1|   ap_memory|          post_eligibility|         array|
+|post_eligibility_we1       |  out|    1|   ap_memory|          post_eligibility|         array|
+|post_eligibility_d1        |  out|    8|   ap_memory|          post_eligibility|         array|
++---------------------------+-----+-----+------------+--------------------------+--------------+
 

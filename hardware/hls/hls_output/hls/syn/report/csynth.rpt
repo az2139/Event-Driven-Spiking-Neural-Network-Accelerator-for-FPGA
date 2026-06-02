@@ -4,52 +4,59 @@
 == Synthesis Summary Report of 'snn_top_hls'
 ================================================================
 + General Information: 
-    * Date:           Wed Feb 11 07:07:58 2026
+    * Date:           Tue Jun  2 11:28:50 2026
     * Version:        2025.2 (Build 6295257 on Nov 14 2025)
     * Project:        hls_output
     * Solution:       hls (Vivado IP Flow Target)
     * Product family: zynq
-    * Target device:  xc7z020-clg400-1
+    * Target device:  xc7z020-clg400-2
     
 
 * Performance & Resource Estimates: 
-+-------------------------------------------------------------+--------+---------------------+----------+-------------+---------+----------+-------------+-----------+-------+------------+----+------------+-------------+-----+
-|                           Modules                           |  Issue |                     | Iteration|             |   Trip  |          |         Latency         |       |            |    |            |             |     |
-|                           & Loops                           |  Type  |    Violation Type   |  Latency |   Interval  |  Count  | Pipelined|   (cycles)  |    (ns)   | Slack |    BRAM    | DSP|     FF     |     LUT     | URAM|
-+-------------------------------------------------------------+--------+---------------------+----------+-------------+---------+----------+-------------+-----------+-------+------------+----+------------+-------------+-----+
-|+ snn_top_hls                                                |  Timing|                    -|         -|  17890597529|        -|        no|  17890597528|  1.789e+11|  -0.68|  287 (102%)|   -|   5327 (5%)|  10855 (20%)|    -|
-| + snn_top_hls_Pipeline_RESET_ELIG                           |       -|                    -|         -|            -|        -|       yes|         1026|  1.026e+04|   0.82|           -|   -|    13 (~0%)|     51 (~0%)|    -|
-|  o RESET_ELIG                                               |       -|                    -|         1|            1|     1024|       yes|         1024|  1.024e+04|   7.30|           -|   -|           -|            -|    -|
-| + snn_top_hls_Pipeline_RESET_TRACES                         |       -|                    -|         -|            -|        -|       yes|         1026|  1.026e+04|   0.82|           -|   -|    13 (~0%)|     51 (~0%)|    -|
-|  o RESET_TRACES                                             |       -|                    -|         1|            1|     1024|       yes|         1024|  1.024e+04|   7.30|           -|   -|           -|            -|    -|
-| + snn_top_hls_Pipeline_RESET_ENCODER                        |       -|                    -|         -|            -|        -|       yes|          786|  7.860e+03|   0.73|           -|   -|    12 (~0%)|     53 (~0%)|    -|
-|  o RESET_ENCODER                                            |       -|                    -|         1|            1|      784|       yes|          784|  7.840e+03|   7.30|           -|   -|           -|            -|    -|
-| + snn_top_hls_Pipeline_INIT_WEIGHT_OUTER_INIT_WEIGHT_INNER  |       -|                    -|         -|            -|        -|       yes|      1048578|  1.049e+07|   0.15|           -|   -|    46 (~0%)|    171 (~0%)|    -|
-|  o INIT_WEIGHT_OUTER_INIT_WEIGHT_INNER                      |       -|                    -|         2|            1|  1048576|       yes|      1048576|  1.049e+07|   7.30|           -|   -|           -|            -|    -|
-| + snn_top_hls_Pipeline_LOAD_FRAME                           |       -|                    -|         -|            -|        -|       yes|          198|  1.980e+03|   0.90|           -|   -|    10 (~0%)|     74 (~0%)|    -|
-|  o LOAD_FRAME                                               |       -|                    -|         1|            1|      196|       yes|          196|  1.960e+03|   7.30|           -|   -|           -|            -|    -|
-| + snn_top_hls_Pipeline_WEIGHT_SUM                           |       -|                    -|         -|            -|        -|       yes|           11|    110.000|   0.38|           -|   -|    41 (~0%)|    212 (~0%)|    -|
-|  o WEIGHT_SUM                                               |       -|                    -|         3|            1|        8|       yes|            9|     90.000|   7.30|           -|   -|           -|            -|    -|
-| o TIME_LOOP                                                 |       -|                    -|    272977|            -|    65535|        no|  17889547695|  1.789e+11|   7.30|           -|   -|           -|            -|    -|
-|  + run_encoder_once                                         |       -|                    -|         -|         1572|        -|        no|         1572|  1.572e+04|   0.72|           -|   -|   154 (~0%)|    422 (~0%)|    -|
-|   + run_encoder_once_Pipeline_ENCODER_LOOP                  |       -|                    -|         -|            -|        -|       yes|         1571|  1.571e+04|   0.72|           -|   -|   119 (~0%)|    397 (~0%)|    -|
-|    o ENCODER_LOOP                                           |      II|  Resource Limitation|         4|            2|      784|       yes|         1569|  1.569e+04|   7.30|           -|   -|           -|            -|    -|
-|  + process_pre_spike_aer                                    |       -|                    -|         -|          268|        -|        no|          268|  2.680e+03|   0.06|           -|   -|   1379 (1%)|    1775 (3%)|    -|
-|   + process_pre_spike_aer_Pipeline_LTD_LOOP                 |       -|                    -|         -|            -|        -|       yes|          263|  2.630e+03|   0.42|           -|   -|   1264 (1%)|    1510 (2%)|    -|
-|    o LTD_LOOP                                               |       -|                    -|         7|            1|      256|       yes|          261|  2.610e+03|   7.30|           -|   -|           -|            -|    -|
-|  + process_post_spike_aer                                   |       -|                    -|         -|          524|        -|        no|          524|  5.240e+03|   0.06|           -|   -|   1144 (1%)|    1319 (2%)|    -|
-|   + process_post_spike_aer_Pipeline_LTP_LOOP                |       -|                    -|         -|            -|        -|       yes|          519|  5.190e+03|   0.48|           -|   -|  1022 (~0%)|    1054 (1%)|    -|
-|    o LTP_LOOP                                               |       -|                    -|         7|            1|      512|       yes|          517|  5.170e+03|   7.30|           -|   -|           -|            -|    -|
-|  + apply_rstdp_reward                                       |       -|                    -|         -|       270338|        -|        no|       270338|  2.703e+06|   0.30|           -|   -|   751 (~0%)|    1004 (1%)|    -|
-|   o RSTDP_OUTER                                             |       -|                    -|       264|            -|     1024|        no|       270336|  2.703e+06|   7.30|           -|   -|           -|            -|    -|
-|    + apply_rstdp_reward_Pipeline_RSTDP_INNER                |       -|                    -|         -|            -|        -|       yes|          261|  2.610e+03|   1.11|           -|   -|   696 (~0%)|     782 (1%)|    -|
-|     o RSTDP_INNER                                           |       -|                    -|         5|            1|      256|       yes|          259|  2.590e+03|   7.30|           -|   -|           -|            -|    -|
-|  + decay_eligibility_traces                                 |       -|                    -|         -|          260|        -|        no|          260|  2.600e+03|   2.13|           -|   -|   228 (~0%)|    236 (~0%)|    -|
-|   + decay_eligibility_traces_Pipeline_DECAY_PRE             |       -|                    -|         -|            -|        -|       yes|          259|  2.590e+03|   2.13|           -|   -|   112 (~0%)|    110 (~0%)|    -|
-|    o DECAY_PRE                                              |       -|                    -|         3|            1|      256|       yes|          257|  2.570e+03|   7.30|           -|   -|           -|            -|    -|
-|   + decay_eligibility_traces_Pipeline_DECAY_POST            |       -|                    -|         -|            -|        -|       yes|          259|  2.590e+03|   2.13|           -|   -|   112 (~0%)|    110 (~0%)|    -|
-|    o DECAY_POST                                             |       -|                    -|         3|            1|      256|       yes|          257|  2.570e+03|   7.30|           -|   -|           -|            -|    -|
-+-------------------------------------------------------------+--------+---------------------+----------+-------------+---------+----------+-------------+-----------+-------+------------+----+------------+-------------+-----+
++---------------------------------------------------+------+---------------------+----------+--------------+--------+----------+--------------+-----------+------+-----------+---------+-----------+------------+-----+
+|                      Modules                      | Issue|                     | Iteration|              |  Trip  |          |          Latency         |      |           |         |           |            |     |
+|                      & Loops                      | Type |    Violation Type   |  Latency |   Interval   |  Count | Pipelined|   (cycles)   |    (ns)   | Slack|   BRAM    |   DSP   |     FF    |     LUT    | URAM|
++---------------------------------------------------+------+---------------------+----------+--------------+--------+----------+--------------+-----------+------+-----------+---------+-----------+------------+-----+
+|+ snn_top_hls                                      |     -|                    -|         -|  565542995652|       -|        no|  565542995651|  5.655e+12|  0.00|  261 (93%)|  13 (5%)|  4421 (4%)|  9329 (17%)|    -|
+| + snn_top_hls_Pipeline_RESET_ELIG                 |     -|                    -|         -|             -|       -|       yes|          4892|  4.892e+04|  2.71|          -|        -|   15 (~0%)|    53 (~0%)|    -|
+|  o RESET_ELIG                                     |     -|                    -|         1|             1|    4890|       yes|          4890|  4.890e+04|  7.30|          -|        -|          -|           -|    -|
+| + snn_top_hls_Pipeline_RESET_TRACES               |     -|                    -|         -|             -|       -|       yes|          4892|  4.892e+04|  2.71|          -|        -|   15 (~0%)|    53 (~0%)|    -|
+|  o RESET_TRACES                                   |     -|                    -|         1|             1|    4890|       yes|          4890|  4.890e+04|  7.30|          -|        -|          -|           -|    -|
+| + snn_top_hls_Pipeline_RESET_ENCODER              |     -|                    -|         -|             -|       -|       yes|           786|  7.860e+03|  2.83|          -|        -|   12 (~0%)|    47 (~0%)|    -|
+|  o RESET_ENCODER                                  |     -|                    -|         1|             1|     784|       yes|           784|  7.840e+03|  7.30|          -|        -|          -|           -|    -|
+| + snn_top_hls_Pipeline_INIT_WEIGHT                |     -|                    -|         -|             -|       -|       yes|        843778|  8.438e+06|  3.04|          -|        -|   23 (~0%)|    78 (~0%)|    -|
+|  o INIT_WEIGHT                                    |     -|                    -|         2|             1|  843776|       yes|        843776|  8.438e+06|  7.30|          -|        -|          -|           -|    -|
+| + snn_top_hls_Pipeline_LOAD_FRAME                 |     -|                    -|         -|             -|       -|       yes|           198|  1.980e+03|  2.59|          -|        -|   10 (~0%)|    57 (~0%)|    -|
+|  o LOAD_FRAME                                     |     -|                    -|         1|             1|     196|       yes|           196|  1.960e+03|  7.30|          -|        -|          -|           -|    -|
+| + snn_top_hls_Pipeline_WEIGHT_SUM                 |     -|                    -|         -|             -|       -|       yes|            68|    680.000|  3.21|          -|        -|   26 (~0%)|    72 (~0%)|    -|
+|  o WEIGHT_SUM                                     |     -|                    -|         4|             1|      64|       yes|            66|    660.000|  7.30|          -|        -|          -|           -|    -|
+| o TIME_LOOP                                       |     -|                    -|   8629620|             -|   65535|        no|  565542146700|  5.655e+12|  7.30|          -|        -|          -|           -|    -|
+|  + decay_all_traces                               |     -|                    -|         -|          4895|       -|        no|          4895|  4.895e+04|  1.78|          -|  2 (~0%)|  246 (~0%)|   222 (~0%)|    -|
+|   + decay_all_traces_Pipeline_DECAY_PRE_TRACE     |     -|                    -|         -|             -|       -|       yes|          4894|  4.894e+04|  1.78|          -|  1 (~0%)|  121 (~0%)|   104 (~0%)|    -|
+|    o DECAY_PRE_TRACE                              |     -|                    -|         4|             1|    4890|       yes|          4892|  4.892e+04|  7.30|          -|        -|          -|           -|    -|
+|   + decay_all_traces_Pipeline_DECAY_POST_TRACE    |     -|                    -|         -|             -|       -|       yes|          4894|  4.894e+04|  1.78|          -|  1 (~0%)|  121 (~0%)|   104 (~0%)|    -|
+|    o DECAY_POST_TRACE                             |     -|                    -|         4|             1|    4890|       yes|          4892|  4.892e+04|  7.30|          -|        -|          -|           -|    -|
+|  + snn_top_hls_Pipeline_ENCODER_LOOP              |     -|                    -|         -|             -|       -|       yes|          1571|  1.571e+04|  0.36|          -|        -|  111 (~0%)|   327 (~0%)|    -|
+|   o ENCODER_LOOP                                  |    II|  Resource Limitation|         4|             2|     784|       yes|          1569|  1.569e+04|  7.30|          -|        -|          -|           -|    -|
+|  + process_pre_spike_aer                          |     -|                    -|         -|          8370|       -|        no|          8370|  8.370e+04|  0.26|          -|   4 (1%)|  829 (~0%)|    657 (1%)|    -|
+|   o LTD_CONN_LOOP                                 |     -|                    -|      1046|             -|       8|        no|          8368|  8.368e+04|  7.30|          -|        -|          -|           -|    -|
+|    + process_pre_spike_aer_Pipeline_LTD_LOOP      |     -|                    -|         -|             -|       -|       yes|          1038|  1.038e+04|  0.26|          -|   3 (1%)|  575 (~0%)|   411 (~0%)|    -|
+|     o LTD_LOOP                                    |     -|                    -|        14|             1|    1024|       yes|          1036|  1.036e+04|  7.30|          -|        -|          -|           -|    -|
+|  + process_post_spike_aer                         |     -|                    -|         -|         98362|       -|        no|         98362|  9.836e+05|  0.26|          -|   3 (1%)|  379 (~0%)|   516 (~0%)|    -|
+|   o LTP_CONN_LOOP                                 |     -|                    -|     12295|             -|       8|        no|         98360|  9.836e+05|  7.30|          -|        -|          -|           -|    -|
+|    + process_post_spike_aer_Pipeline_LTP_LOOP     |     -|                    -|         -|             -|       -|       yes|         12291|  1.229e+05|  0.26|          -|   3 (1%)|  163 (~0%)|   291 (~0%)|    -|
+|     o LTP_LOOP                                    |    II|    Memory Dependency|        14|            12|    1024|       yes|         12289|  1.229e+05|  7.30|          -|        -|          -|           -|    -|
+|  + apply_rstdp_reward                             |     -|                    -|         -|       8511513|       -|        no|       8511513|  8.512e+07|  0.00|          -|   3 (1%)|  709 (~0%)|    687 (1%)|    -|
+|   o RSTDP_CONN_LOOP                               |     -|                    -|   1063939|             -|       8|        no|       8511512|  8.512e+07|  7.30|          -|        -|          -|           -|    -|
+|    o RSTDP_OUTER                                  |     -|                    -|      1039|             -|    1024|        no|       1063936|  1.064e+07|  7.30|          -|        -|          -|           -|    -|
+|     + apply_rstdp_reward_Pipeline_RSTDP_INNER     |     -|                    -|         -|             -|       -|       yes|          1032|  1.032e+04|  0.00|          -|  2 (~0%)|  414 (~0%)|   403 (~0%)|    -|
+|      o RSTDP_INNER                                |     -|                    -|         8|             1|    1024|       yes|          1030|  1.030e+04|  7.30|          -|        -|          -|           -|    -|
+|  + decay_eligibility_traces                       |     -|                    -|         -|          4893|       -|        no|          4893|  4.893e+04|  2.48|          -|        -|   62 (~0%)|   158 (~0%)|    -|
+|   + decay_eligibility_traces_Pipeline_DECAY_PRE   |     -|                    -|         -|             -|       -|       yes|          4892|  4.892e+04|  2.48|          -|        -|   29 (~0%)|    72 (~0%)|    -|
+|    o DECAY_PRE                                    |     -|                    -|         2|             1|    4890|       yes|          4890|  4.890e+04|  7.30|          -|        -|          -|           -|    -|
+|   + decay_eligibility_traces_Pipeline_DECAY_POST  |     -|                    -|         -|             -|       -|       yes|          4892|  4.892e+04|  2.48|          -|        -|   29 (~0%)|    72 (~0%)|    -|
+|    o DECAY_POST                                   |     -|                    -|         2|             1|    4890|       yes|          4890|  4.890e+04|  7.30|          -|        -|          -|           -|    -|
++---------------------------------------------------+------+---------------------+----------+--------------+--------+----------+--------------+-----------+------+-----------+---------+-----------+------------+-----+
     II Violation Information: docs.amd.com/access/sources/dita/topic?Doc_Version=2025.2%20English&url=ug1448-hls-guidance&resourceid=200-880.html
     Name Prefix: '+' for module, 'o' for loop, '*' for dataflow
 
@@ -107,24 +114,34 @@
 +----------------+-----------+---------------+-------+-------+-----+-------+-------+--------+-------+-------+--------+
 
 * Other Ports
-+---------------------+---------+-----------+----------+
-| Port                | Mode    | Direction | Bitwidth |
-+---------------------+---------+-----------+----------+
-| leak_rate_out       | ap_none | out       | 16       |
-| snn_busy            | ap_none | in        | 1        |
-| snn_enable          | ap_none | out       | 1        |
-| snn_ready           | ap_none | in        | 1        |
-| snn_reset           | ap_none | out       | 1        |
-| spike_in_neuron_id  | ap_none | out       | 10       |
-| spike_in_ready      | ap_none | in        | 1        |
-| spike_in_valid      | ap_none | out       | 1        |
-| spike_in_weight     | ap_none | out       | 8        |
-| spike_out_neuron_id | ap_none | in        | 10       |
-| spike_out_ready     | ap_none | out       | 1        |
-| spike_out_valid     | ap_none | in        | 1        |
-| spike_out_weight    | ap_none | in        | 8        |
-| threshold_out       | ap_none | out       | 16       |
-+---------------------+---------+-----------+----------+
++-------------------------+---------+-----------+----------+
+| Port                    | Mode    | Direction | Bitwidth |
++-------------------------+---------+-----------+----------+
+| leak_rate_out           | ap_none | out       | 16       |
+| learn_weight_data       | ap_none | out       | 8        |
+| learn_weight_dst        | ap_none | out       | 7        |
+| learn_weight_dst_group  | ap_none | out       | 4        |
+| learn_weight_exc        | ap_none | out       | 1        |
+| learn_weight_fanout_idx | ap_none | out       | 4        |
+| learn_weight_group      | ap_none | out       | 4        |
+| learn_weight_is_inter   | ap_none | out       | 1        |
+| learn_weight_ready      | ap_none | in        | 1        |
+| learn_weight_src        | ap_none | out       | 7        |
+| learn_weight_valid      | ap_none | out       | 1        |
+| snn_busy                | ap_none | in        | 1        |
+| snn_enable              | ap_none | out       | 1        |
+| snn_ready               | ap_none | in        | 1        |
+| snn_reset               | ap_none | out       | 1        |
+| spike_in_neuron_id      | ap_none | out       | 11       |
+| spike_in_ready          | ap_none | in        | 1        |
+| spike_in_valid          | ap_none | out       | 1        |
+| spike_in_weight         | ap_none | out       | 8        |
+| spike_out_neuron_id     | ap_none | in        | 11       |
+| spike_out_ready         | ap_none | out       | 1        |
+| spike_out_valid         | ap_none | in        | 1        |
+| spike_out_weight        | ap_none | in        | 8        |
+| threshold_out           | ap_none | out       | 16       |
++-------------------------+---------+-----------+----------+
 
 * TOP LEVEL CONTROL
 +-----------+------------+-----------+
@@ -141,86 +158,106 @@
 == SW I/O Information
 ================================================================
 * Top Function Arguments
-+---------------------+-----------+------------------------------------------------------------------------------+
-| Argument            | Direction | Datatype                                                                     |
-+---------------------+-----------+------------------------------------------------------------------------------+
-| ctrl_reg            | in        | ap_uint<32>                                                                  |
-| config_reg          | in        | ap_uint<32>                                                                  |
-| mode_reg            | in        | ap_uint<32>                                                                  |
-| time_steps_reg      | in        | ap_uint<32>                                                                  |
-| learning_params     | in        | learning_params_t                                                            |
-| encoder_config      | in        | encoder_config_t                                                             |
-| status_reg          | out       | ap_uint<32>&                                                                 |
-| spike_count_reg     | out       | ap_uint<32>&                                                                 |
-| weight_sum_reg      | out       | ap_uint<32>&                                                                 |
-| version_reg         | out       | ap_uint<32>&                                                                 |
-| s_axis_spikes       | in        | stream<hls::axis<ap_uint<32>, 1UL, 1UL, 1UL, (unsigned char)'8', false>, 0>& |
-| s_axis_data         | in        | stream<hls::axis<ap_uint<32>, 1UL, 1UL, 1UL, (unsigned char)'8', false>, 0>& |
-| s_axis_weights      | in        | stream<hls::axis<ap_uint<32>, 1UL, 1UL, 1UL, (unsigned char)'8', false>, 0>& |
-| m_axis_spikes       | out       | stream<hls::axis<ap_uint<32>, 1UL, 1UL, 1UL, (unsigned char)'8', false>, 0>& |
-| m_axis_weights      | out       | stream<hls::axis<ap_uint<32>, 1UL, 1UL, 1UL, (unsigned char)'8', false>, 0>& |
-| reward_signal       | in        | ap_int<8>                                                                    |
-| spike_in_valid      | out       | ap_uint<1>&                                                                  |
-| spike_in_neuron_id  | out       | ap_uint<10>&                                                                 |
-| spike_in_weight     | out       | ap_int<8>&                                                                   |
-| spike_in_ready      | in        | ap_uint<1>                                                                   |
-| spike_out_valid     | in        | ap_uint<1>                                                                   |
-| spike_out_neuron_id | in        | ap_uint<10>                                                                  |
-| spike_out_weight    | in        | ap_int<8>                                                                    |
-| spike_out_ready     | out       | ap_uint<1>&                                                                  |
-| snn_enable          | out       | ap_uint<1>&                                                                  |
-| snn_reset           | out       | ap_uint<1>&                                                                  |
-| threshold_out       | out       | ap_uint<16>&                                                                 |
-| leak_rate_out       | out       | ap_uint<16>&                                                                 |
-| snn_ready           | in        | ap_uint<1>                                                                   |
-| snn_busy            | in        | ap_uint<1>                                                                   |
-+---------------------+-----------+------------------------------------------------------------------------------+
++-------------------------+-----------+------------------------------------------------------------------------------+
+| Argument                | Direction | Datatype                                                                     |
++-------------------------+-----------+------------------------------------------------------------------------------+
+| ctrl_reg                | in        | ap_uint<32>                                                                  |
+| config_reg              | in        | ap_uint<32>                                                                  |
+| mode_reg                | in        | ap_uint<32>                                                                  |
+| time_steps_reg          | in        | ap_uint<32>                                                                  |
+| learning_params         | in        | learning_params_t                                                            |
+| encoder_config          | in        | encoder_config_t                                                             |
+| status_reg              | out       | ap_uint<32>&                                                                 |
+| spike_count_reg         | out       | ap_uint<32>&                                                                 |
+| weight_sum_reg          | out       | ap_uint<32>&                                                                 |
+| version_reg             | out       | ap_uint<32>&                                                                 |
+| s_axis_spikes           | in        | stream<hls::axis<ap_uint<32>, 1UL, 1UL, 1UL, (unsigned char)'8', false>, 0>& |
+| s_axis_data             | in        | stream<hls::axis<ap_uint<32>, 1UL, 1UL, 1UL, (unsigned char)'8', false>, 0>& |
+| s_axis_weights          | in        | stream<hls::axis<ap_uint<32>, 1UL, 1UL, 1UL, (unsigned char)'8', false>, 0>& |
+| m_axis_spikes           | out       | stream<hls::axis<ap_uint<32>, 1UL, 1UL, 1UL, (unsigned char)'8', false>, 0>& |
+| m_axis_weights          | out       | stream<hls::axis<ap_uint<32>, 1UL, 1UL, 1UL, (unsigned char)'8', false>, 0>& |
+| reward_signal           | in        | ap_int<8>                                                                    |
+| spike_in_valid          | out       | ap_uint<1>&                                                                  |
+| spike_in_neuron_id      | out       | ap_uint<11>&                                                                 |
+| spike_in_weight         | out       | ap_int<8>&                                                                   |
+| spike_in_ready          | in        | ap_uint<1>                                                                   |
+| spike_out_valid         | in        | ap_uint<1>                                                                   |
+| spike_out_neuron_id     | in        | ap_uint<11>                                                                  |
+| spike_out_weight        | in        | ap_int<8>                                                                    |
+| spike_out_ready         | out       | ap_uint<1>&                                                                  |
+| learn_weight_valid      | out       | ap_uint<1>&                                                                  |
+| learn_weight_group      | out       | ap_uint<4>&                                                                  |
+| learn_weight_src        | out       | ap_uint<7>&                                                                  |
+| learn_weight_dst        | out       | ap_uint<7>&                                                                  |
+| learn_weight_data       | out       | ap_uint<8>&                                                                  |
+| learn_weight_exc        | out       | ap_uint<1>&                                                                  |
+| learn_weight_is_inter   | out       | ap_uint<1>&                                                                  |
+| learn_weight_dst_group  | out       | ap_uint<4>&                                                                  |
+| learn_weight_fanout_idx | out       | ap_uint<4>&                                                                  |
+| learn_weight_ready      | in        | ap_uint<1>                                                                   |
+| snn_enable              | out       | ap_uint<1>&                                                                  |
+| snn_reset               | out       | ap_uint<1>&                                                                  |
+| threshold_out           | out       | ap_uint<16>&                                                                 |
+| leak_rate_out           | out       | ap_uint<16>&                                                                 |
+| snn_ready               | in        | ap_uint<1>                                                                   |
+| snn_busy                | in        | ap_uint<1>                                                                   |
++-------------------------+-----------+------------------------------------------------------------------------------+
 
 * SW-to-HW Mapping
-+---------------------+---------------------+-----------+------------------------------------------------+
-| Argument            | HW Interface        | HW Type   | HW Info                                        |
-+---------------------+---------------------+-----------+------------------------------------------------+
-| ctrl_reg            | s_axi_ctrl          | register  | name=ctrl_reg offset=0x10 range=32             |
-| config_reg          | s_axi_ctrl          | register  | name=config_reg offset=0x18 range=32           |
-| mode_reg            | s_axi_ctrl          | register  | name=mode_reg offset=0x20 range=32             |
-| time_steps_reg      | s_axi_ctrl          | register  | name=time_steps_reg offset=0x28 range=32       |
-| learning_params     | s_axi_ctrl          | register  | name=learning_params_1 offset=0x30 range=32    |
-| learning_params     | s_axi_ctrl          | register  | name=learning_params_2 offset=0x34 range=32    |
-| learning_params     | s_axi_ctrl          | register  | name=learning_params_3 offset=0x38 range=32    |
-| learning_params     | s_axi_ctrl          | register  | name=learning_params_4 offset=0x3c range=32    |
-| learning_params     | s_axi_ctrl          | register  | name=learning_params_5 offset=0x40 range=32    |
-| encoder_config      | s_axi_ctrl          | register  | name=encoder_config_1 offset=0x48 range=32     |
-| encoder_config      | s_axi_ctrl          | register  | name=encoder_config_2 offset=0x4c range=32     |
-| encoder_config      | s_axi_ctrl          | register  | name=encoder_config_3 offset=0x50 range=32     |
-| status_reg          | s_axi_ctrl          | register  | name=status_reg offset=0x58 range=32           |
-| status_reg          | s_axi_ctrl          | register  | name=status_reg_ctrl offset=0x5c range=32      |
-| spike_count_reg     | s_axi_ctrl          | register  | name=spike_count_reg offset=0x68 range=32      |
-| spike_count_reg     | s_axi_ctrl          | register  | name=spike_count_reg_ctrl offset=0x6c range=32 |
-| weight_sum_reg      | s_axi_ctrl          | register  | name=weight_sum_reg offset=0x78 range=32       |
-| weight_sum_reg      | s_axi_ctrl          | register  | name=weight_sum_reg_ctrl offset=0x7c range=32  |
-| version_reg         | s_axi_ctrl          | register  | name=version_reg offset=0x88 range=32          |
-| version_reg         | s_axi_ctrl          | register  | name=version_reg_ctrl offset=0x8c range=32     |
-| s_axis_spikes       | s_axis_spikes       | interface |                                                |
-| s_axis_data         | s_axis_data         | interface |                                                |
-| s_axis_weights      | s_axis_weights      | interface |                                                |
-| m_axis_spikes       | m_axis_spikes       | interface |                                                |
-| m_axis_weights      | m_axis_weights      | interface |                                                |
-| reward_signal       | s_axi_ctrl          | register  | name=reward_signal offset=0x98 range=32        |
-| spike_in_valid      | spike_in_valid      | port      |                                                |
-| spike_in_neuron_id  | spike_in_neuron_id  | port      |                                                |
-| spike_in_weight     | spike_in_weight     | port      |                                                |
-| spike_in_ready      | spike_in_ready      | port      |                                                |
-| spike_out_valid     | spike_out_valid     | port      |                                                |
-| spike_out_neuron_id | spike_out_neuron_id | port      |                                                |
-| spike_out_weight    | spike_out_weight    | port      |                                                |
-| spike_out_ready     | spike_out_ready     | port      |                                                |
-| snn_enable          | snn_enable          | port      |                                                |
-| snn_reset           | snn_reset           | port      |                                                |
-| threshold_out       | threshold_out       | port      |                                                |
-| leak_rate_out       | leak_rate_out       | port      |                                                |
-| snn_ready           | snn_ready           | port      |                                                |
-| snn_busy            | snn_busy            | port      |                                                |
-+---------------------+---------------------+-----------+------------------------------------------------+
++-------------------------+-------------------------+-----------+------------------------------------------------+
+| Argument                | HW Interface            | HW Type   | HW Info                                        |
++-------------------------+-------------------------+-----------+------------------------------------------------+
+| ctrl_reg                | s_axi_ctrl              | register  | name=ctrl_reg offset=0x10 range=32             |
+| config_reg              | s_axi_ctrl              | register  | name=config_reg offset=0x18 range=32           |
+| mode_reg                | s_axi_ctrl              | register  | name=mode_reg offset=0x20 range=32             |
+| time_steps_reg          | s_axi_ctrl              | register  | name=time_steps_reg offset=0x28 range=32       |
+| learning_params         | s_axi_ctrl              | register  | name=learning_params_1 offset=0x30 range=32    |
+| learning_params         | s_axi_ctrl              | register  | name=learning_params_2 offset=0x34 range=32    |
+| learning_params         | s_axi_ctrl              | register  | name=learning_params_3 offset=0x38 range=32    |
+| learning_params         | s_axi_ctrl              | register  | name=learning_params_4 offset=0x3c range=32    |
+| learning_params         | s_axi_ctrl              | register  | name=learning_params_5 offset=0x40 range=32    |
+| encoder_config          | s_axi_ctrl              | register  | name=encoder_config_1 offset=0x48 range=32     |
+| encoder_config          | s_axi_ctrl              | register  | name=encoder_config_2 offset=0x4c range=32     |
+| encoder_config          | s_axi_ctrl              | register  | name=encoder_config_3 offset=0x50 range=32     |
+| status_reg              | s_axi_ctrl              | register  | name=status_reg offset=0x58 range=32           |
+| status_reg              | s_axi_ctrl              | register  | name=status_reg_ctrl offset=0x5c range=32      |
+| spike_count_reg         | s_axi_ctrl              | register  | name=spike_count_reg offset=0x68 range=32      |
+| spike_count_reg         | s_axi_ctrl              | register  | name=spike_count_reg_ctrl offset=0x6c range=32 |
+| weight_sum_reg          | s_axi_ctrl              | register  | name=weight_sum_reg offset=0x78 range=32       |
+| weight_sum_reg          | s_axi_ctrl              | register  | name=weight_sum_reg_ctrl offset=0x7c range=32  |
+| version_reg             | s_axi_ctrl              | register  | name=version_reg offset=0x88 range=32          |
+| version_reg             | s_axi_ctrl              | register  | name=version_reg_ctrl offset=0x8c range=32     |
+| s_axis_spikes           | s_axis_spikes           | interface |                                                |
+| s_axis_data             | s_axis_data             | interface |                                                |
+| s_axis_weights          | s_axis_weights          | interface |                                                |
+| m_axis_spikes           | m_axis_spikes           | interface |                                                |
+| m_axis_weights          | m_axis_weights          | interface |                                                |
+| reward_signal           | s_axi_ctrl              | register  | name=reward_signal offset=0x98 range=32        |
+| spike_in_valid          | spike_in_valid          | port      |                                                |
+| spike_in_neuron_id      | spike_in_neuron_id      | port      |                                                |
+| spike_in_weight         | spike_in_weight         | port      |                                                |
+| spike_in_ready          | spike_in_ready          | port      |                                                |
+| spike_out_valid         | spike_out_valid         | port      |                                                |
+| spike_out_neuron_id     | spike_out_neuron_id     | port      |                                                |
+| spike_out_weight        | spike_out_weight        | port      |                                                |
+| spike_out_ready         | spike_out_ready         | port      |                                                |
+| learn_weight_valid      | learn_weight_valid      | port      |                                                |
+| learn_weight_group      | learn_weight_group      | port      |                                                |
+| learn_weight_src        | learn_weight_src        | port      |                                                |
+| learn_weight_dst        | learn_weight_dst        | port      |                                                |
+| learn_weight_data       | learn_weight_data       | port      |                                                |
+| learn_weight_exc        | learn_weight_exc        | port      |                                                |
+| learn_weight_is_inter   | learn_weight_is_inter   | port      |                                                |
+| learn_weight_dst_group  | learn_weight_dst_group  | port      |                                                |
+| learn_weight_fanout_idx | learn_weight_fanout_idx | port      |                                                |
+| learn_weight_ready      | learn_weight_ready      | port      |                                                |
+| snn_enable              | snn_enable              | port      |                                                |
+| snn_reset               | snn_reset               | port      |                                                |
+| threshold_out           | threshold_out           | port      |                                                |
+| leak_rate_out           | leak_rate_out           | port      |                                                |
+| snn_ready               | snn_ready               | port      |                                                |
+| snn_busy                | snn_busy                | port      |                                                |
++-------------------------+-------------------------+-----------+------------------------------------------------+
 
 
 ================================================================
@@ -232,445 +269,515 @@
 ================================================================
 == Bind Op Report
 ================================================================
-+-------------------------------------------------------------+-----+--------+--------------------------+-----------+--------------------------+---------+
-| Name                                                        | DSP | Pragma | Variable                 | Op        | Impl                     | Latency |
-+-------------------------------------------------------------+-----+--------+--------------------------+-----------+--------------------------+---------+
-| + snn_top_hls                                               | 0   |        |                          |           |                          |         |
-|   checkpoint_mode_fu_1683_p2                                |     |        | checkpoint_mode          | seteq     | auto                     | 0       |
-|   stdp_mode_fu_1689_p2                                      |     |        | stdp_mode                | seteq     | auto                     | 0       |
-|   stdp_active_fu_1695_p2                                    |     |        | stdp_active              | and       | auto                     | 0       |
-|   icmp_ln546_fu_1701_p2                                     |     |        | icmp_ln546               | seteq     | auto                     | 0       |
-|   time_steps_1_fu_1711_p3                                   |     |        | time_steps_1             | select    | auto_sel                 | 0       |
-|   xor_ln554_fu_1739_p2                                      |     |        | xor_ln554                | xor       | auto                     | 0       |
-|   or_ln554_fu_1745_p2                                       |     |        | or_ln554                 | or        | auto                     | 0       |
-|   icmp_ln643_fu_1874_p2                                     |     |        | icmp_ln643               | setne     | auto                     | 0       |
-|   and_ln643_fu_1879_p2                                      |     |        | and_ln643                | and       | auto                     | 0       |
-|   and_ln666_fu_1917_p2                                      |     |        | and_ln666                | and       | auto                     | 0       |
-|   and_ln729_fu_1921_p2                                      |     |        | and_ln729                | and       | auto                     | 0       |
-|   xor_ln729_fu_1925_p2                                      |     |        | xor_ln729                | xor       | auto                     | 0       |
-|   or_ln735_fu_1931_p2                                       |     |        | or_ln735                 | or        | auto                     | 0       |
-|   xor_ln729_1_fu_1935_p2                                    |     |        | xor_ln729_1              | xor       | auto                     | 0       |
-|   or_ln729_fu_1940_p2                                       |     |        | or_ln729                 | or        | auto                     | 0       |
-|   icmp_ln654_fu_1958_p2                                     |     |        | icmp_ln654               | seteq     | auto                     | 0       |
-|   t_2_fu_1963_p2                                            |     |        | t_2                      | add       | fabric                   | 0       |
-|   sparsemux_9_2_8_1_1_U268                                  |     |        | tmp_2                    | sparsemux | compactencoding_dontcare | 0       |
-|   new_elig_fu_2091_p2                                       |     |        | new_elig                 | add       | fabric                   | 0       |
-|   icmp_ln388_fu_2111_p2                                     |     |        | icmp_ln388               | seteq     | auto                     | 0       |
-|   select_ln388_fu_2116_p3                                   |     |        | select_ln388             | select    | auto_sel                 | 0       |
-|   add_ln698_fu_2136_p2                                      |     |        | add_ln698                | add       | fabric                   | 0       |
-|   sparsemux_9_2_8_1_1_U269                                  |     |        | tmp_8                    | sparsemux | compactencoding_dontcare | 0       |
-|   new_elig_1_fu_2202_p2                                     |     |        | new_elig_1               | add       | fabric                   | 0       |
-|   icmp_ln395_1_fu_2222_p2                                   |     |        | icmp_ln395_1             | seteq     | auto                     | 0       |
-|   select_ln395_fu_2227_p3                                   |     |        | select_ln395             | select    | auto_sel                 | 0       |
-|   and_ln729_1_fu_2247_p2                                    |     |        | and_ln729_1              | and       | auto                     | 0       |
-|   sparsemux_9_2_4_1_1_U270                                  |     |        | tmp_10                   | sparsemux | compactencoding_dontcare | 0       |
-|   add_ln749_fu_2288_p2                                      |     |        | add_ln749                | add       | fabric                   | 0       |
-|   add_ln760_fu_2341_p2                                      |     |        | add_ln760                | add       | fabric                   | 0       |
-|   icmp_ln654_1_fu_1982_p2                                   |     |        | icmp_ln654_1             | seteq     | auto                     | 0       |
-|  + snn_top_hls_Pipeline_RESET_ELIG                          | 0   |        |                          |           |                          |         |
-|    icmp_ln565_fu_222_p2                                     |     |        | icmp_ln565               | seteq     | auto                     | 0       |
-|    add_ln565_fu_228_p2                                      |     |        | add_ln565                | add       | fabric                   | 0       |
-|  + snn_top_hls_Pipeline_RESET_TRACES                        | 0   |        |                          |           |                          |         |
-|    icmp_ln572_fu_384_p2                                     |     |        | icmp_ln572               | seteq     | auto                     | 0       |
-|    add_ln572_fu_390_p2                                      |     |        | add_ln572                | add       | fabric                   | 0       |
-|  + snn_top_hls_Pipeline_RESET_ENCODER                       | 0   |        |                          |           |                          |         |
-|    icmp_ln580_fu_94_p2                                      |     |        | icmp_ln580               | seteq     | auto                     | 0       |
-|    add_ln580_fu_100_p2                                      |     |        | add_ln580                | add       | fabric                   | 0       |
-|  + snn_top_hls_Pipeline_INIT_WEIGHT_OUTER_INIT_WEIGHT_INNER | 0   |        |                          |           |                          |         |
-|    icmp_ln587_fu_259_p2                                     |     |        | icmp_ln587               | seteq     | auto                     | 0       |
-|    add_ln587_1_fu_265_p2                                    |     |        | add_ln587_1              | add       | fabric                   | 0       |
-|    add_ln587_fu_282_p2                                      |     |        | add_ln587                | add       | fabric                   | 0       |
-|    icmp_ln588_fu_288_p2                                     |     |        | icmp_ln588               | seteq     | auto                     | 0       |
-|    select_ln587_fu_294_p3                                   |     |        | select_ln587             | select    | auto_sel                 | 0       |
-|    select_ln587_1_fu_302_p3                                 |     |        | select_ln587_1           | select    | auto_sel                 | 0       |
-|    add_ln588_fu_359_p2                                      |     |        | add_ln588                | add       | fabric                   | 0       |
-|  + snn_top_hls_Pipeline_LOAD_FRAME                          | 0   |        |                          |           |                          |         |
-|    add_ln628_fu_174_p2                                      |     |        | add_ln628                | add       | fabric                   | 0       |
-|    xor_ln637_fu_248_p2                                      |     |        | xor_ln637                | xor       | auto                     | 0       |
-|    icmp_ln628_fu_254_p2                                     |     |        | icmp_ln628               | setlt     | auto                     | 0       |
-|    or_cond_fu_260_p2                                        |     |        | or_cond                  | and       | auto                     | 0       |
-|  + run_encoder_once                                         | 0   |        |                          |           |                          |         |
-|   + run_encoder_once_Pipeline_ENCODER_LOOP                  | 0   |        |                          |           |                          |         |
-|     icmp_ln99_fu_203_p2                                     |     |        | icmp_ln99                | seteq     | auto                     | 0       |
-|     icmp_ln93_fu_217_p2                                     |     |        | icmp_ln93                | seteq     | auto                     | 0       |
-|     ch_2_fu_223_p2                                          |     |        | ch_2                     | add       | fabric                   | 0       |
-|     icmp_ln95_fu_251_p2                                     |     |        | icmp_ln95                | setlt     | auto                     | 0       |
-|     value_fu_265_p3                                         |     |        | value                    | select    | auto_sel                 | 0       |
-|     select_ln69_fu_277_p3                                   |     |        | select_ln69              | select    | auto_sel                 | 0       |
-|     add_ln69_fu_285_p2                                      |     |        | add_ln69                 | add       | fabric                   | 0       |
-|     icmp_ln72_fu_291_p2                                     |     |        | icmp_ln72                | setgt     | auto                     | 0       |
-|     sub_ln73_fu_295_p2                                      |     |        | sub_ln73                 | sub       | fabric                   | 0       |
-|     select_ln72_fu_299_p3                                   |     |        | select_ln72              | select    | auto_sel                 | 0       |
-|     icmp_ln77_fu_308_p2                                     |     |        | icmp_ln77                | setlt     | auto                     | 0       |
-|     add_ln55_fu_336_p2                                      |     |        | add_ln55                 | add       | fabric                   | 0       |
-|     sub_ln79_fu_313_p2                                      |     |        | sub_ln79                 | sub       | fabric                   | 0       |
-|  + snn_top_hls_Pipeline_WEIGHT_SUM                          | 0   |        |                          |           |                          |         |
-|    icmp_ln789_fu_296_p2                                     |     |        | icmp_ln789               | seteq     | auto                     | 0       |
-|    add_ln789_fu_302_p2                                      |     |        | add_ln789                | add       | fabric                   | 0       |
-|    select_ln792_fu_367_p3                                   |     |        | select_ln792             | select    | auto_sel                 | 0       |
-|    select_ln792_1_fu_378_p3                                 |     |        | select_ln792_1           | select    | auto_sel                 | 0       |
-|    select_ln792_2_fu_389_p3                                 |     |        | select_ln792_2           | select    | auto_sel                 | 0       |
-|    select_ln792_3_fu_400_p3                                 |     |        | select_ln792_3           | select    | auto_sel                 | 0       |
-|    select_ln792_4_fu_411_p3                                 |     |        | select_ln792_4           | select    | auto_sel                 | 0       |
-|    select_ln792_5_fu_422_p3                                 |     |        | select_ln792_5           | select    | auto_sel                 | 0       |
-|    select_ln792_6_fu_433_p3                                 |     |        | select_ln792_6           | select    | auto_sel                 | 0       |
-|    select_ln792_7_fu_444_p3                                 |     |        | select_ln792_7           | select    | auto_sel                 | 0       |
-|    add_ln792_fu_455_p2                                      |     |        | add_ln792                | add       | fabric                   | 0       |
-|    add_ln792_1_fu_461_p2                                    |     |        | add_ln792_1              | add       | fabric                   | 0       |
-|    add_ln792_2_fu_488_p2                                    |     |        | add_ln792_2              | add       | fabric                   | 0       |
-|    add_ln792_3_fu_467_p2                                    |     |        | add_ln792_3              | add       | fabric                   | 0       |
-|    add_ln792_4_fu_473_p2                                    |     |        | add_ln792_4              | add       | fabric                   | 0       |
-|    add_ln792_5_fu_504_p2                                    |     |        | add_ln792_5              | add       | fabric                   | 0       |
-|    add_ln792_6_fu_514_p2                                    |     |        | add_ln792_6              | add       | fabric                   | 0       |
-|    weight_sum_1_fu_524_p2                                   |     |        | weight_sum_1             | add       | fabric                   | 0       |
-|  + process_pre_spike_aer                                    | 0   |        |                          |           |                          |         |
-|    sparsemux_9_2_8_1_1_U104                                 |     |        | old_pre_trace            | sparsemux | compactencoding_dontcare | 0       |
-|    sparsemux_9_2_16_1_1_U103                                |     |        | old_pre_last_spike_time  | sparsemux | compactencoding_dontcare | 0       |
-|    icmp_ln160_fu_532_p2                                     |     |        | icmp_ln160               | seteq     | auto                     | 0       |
-|    dt_fu_435_p2                                             |     |        | dt                       | sub       | fabric                   | 0       |
-|    icmp_ln166_fu_450_p2                                     |     |        | icmp_ln166               | setne     | auto                     | 0       |
-|    sparsemux_33_4_8_1_1_U105                                |     |        | zext_ln170_1_cast        | sparsemux | compactencoding_dontcare | 0       |
-|    mul_8ns_8ns_16_1_1_U106                                  |     |        | mul_ln170                | mul       | auto                     | 0       |
-|    or_ln166_fu_559_p2                                       |     |        | or_ln166                 | or        | auto                     | 0       |
-|    decayed_pre_1_fu_564_p3                                  |     |        | decayed_pre_1            | select    | auto_sel                 | 0       |
-|    new_trace_fu_576_p2                                      |     |        | new_trace                | add       | fabric                   | 0       |
-|    select_ln206_fu_594_p3                                   |     |        | select_ln206             | select    | auto_sel                 | 0       |
-|   + process_pre_spike_aer_Pipeline_LTD_LOOP                 | 0   |        |                          |           |                          |         |
-|     icmp_ln160_fu_597_p2                                    |     |        | icmp_ln160               | seteq     | auto                     | 0       |
-|     dt_fu_497_p2                                            |     |        | dt                       | sub       | fabric                   | 0       |
-|     icmp_ln166_fu_512_p2                                    |     |        | icmp_ln166               | setne     | auto                     | 0       |
-|     sparsemux_33_4_8_1_1_U69                                |     |        | zext_ln170_3_cast        | sparsemux | compactencoding_dontcare | 0       |
-|     mul_8ns_8ns_16_1_1_U70                                  |     |        | mul_ln170                | mul       | auto                     | 0       |
-|     or_ln166_fu_990_p2                                      |     |        | or_ln166                 | or        | auto                     | 0       |
-|     post_trace_val_1_fu_994_p3                              |     |        | post_trace_val_1         | select    | auto_sel                 | 0       |
-|     icmp_ln221_fu_1002_p2                                   |     |        | icmp_ln221               | seteq     | auto                     | 0       |
-|     current_w_fu_1089_p3                                    |     |        | current_w                | select    | auto_sel                 | 0       |
-|     xor_ln228_fu_1168_p2                                    |     |        | xor_ln228                | xor       | auto                     | 0       |
-|     mul_4ns_8ns_12_1_1_U77                                  |     |        | mul_ln229                | mul       | auto                     | 0       |
-|     w_fu_1207_p2                                            |     |        | w                        | sub       | fabric                   | 0       |
-|     icmp_ln181_fu_1373_p2                                   |     |        | icmp_ln181               | setlt     | auto                     | 0       |
-|     select_ln180_fu_1378_p3                                 |     |        | select_ln180             | select    | auto_sel                 | 0       |
-|     icmp_ln160_1_fu_686_p2                                  |     |        | icmp_ln160_1             | seteq     | auto                     | 0       |
-|     dt_1_fu_522_p2                                          |     |        | dt_1                     | sub       | fabric                   | 0       |
-|     icmp_ln166_1_fu_537_p2                                  |     |        | icmp_ln166_1             | setne     | auto                     | 0       |
-|     sparsemux_33_4_8_1_1_U71                                |     |        | zext_ln170_5_cast        | sparsemux | compactencoding_dontcare | 0       |
-|     mul_8ns_8ns_16_1_1_U72                                  |     |        | mul_ln170_1              | mul       | auto                     | 0       |
-|     or_ln166_1_fu_1017_p2                                   |     |        | or_ln166_1               | or        | auto                     | 0       |
-|     post_trace_val_3_fu_1021_p3                             |     |        | post_trace_val_3         | select    | auto_sel                 | 0       |
-|     icmp_ln221_1_fu_1029_p2                                 |     |        | icmp_ln221_1             | seteq     | auto                     | 0       |
-|     current_w_1_fu_1108_p3                                  |     |        | current_w_1              | select    | auto_sel                 | 0       |
-|     xor_ln228_1_fu_1220_p2                                  |     |        | xor_ln228_1              | xor       | auto                     | 0       |
-|     mul_4ns_8ns_12_1_1_U78                                  |     |        | mul_ln229_1              | mul       | auto                     | 0       |
-|     w_1_fu_1259_p2                                          |     |        | w_1                      | sub       | fabric                   | 0       |
-|     icmp_ln181_1_fu_1387_p2                                 |     |        | icmp_ln181_1             | setlt     | auto                     | 0       |
-|     select_ln180_1_fu_1392_p3                               |     |        | select_ln180_1           | select    | auto_sel                 | 0       |
-|     icmp_ln160_2_fu_775_p2                                  |     |        | icmp_ln160_2             | seteq     | auto                     | 0       |
-|     dt_2_fu_547_p2                                          |     |        | dt_2                     | sub       | fabric                   | 0       |
-|     icmp_ln166_2_fu_562_p2                                  |     |        | icmp_ln166_2             | setne     | auto                     | 0       |
-|     sparsemux_33_4_8_1_1_U73                                |     |        | zext_ln170_7_cast        | sparsemux | compactencoding_dontcare | 0       |
-|     mul_8ns_8ns_16_1_1_U74                                  |     |        | mul_ln170_2              | mul       | auto                     | 0       |
-|     or_ln166_2_fu_1044_p2                                   |     |        | or_ln166_2               | or        | auto                     | 0       |
-|     post_trace_val_5_fu_1048_p3                             |     |        | post_trace_val_5         | select    | auto_sel                 | 0       |
-|     icmp_ln221_2_fu_1056_p2                                 |     |        | icmp_ln221_2             | seteq     | auto                     | 0       |
-|     current_w_2_fu_1127_p3                                  |     |        | current_w_2              | select    | auto_sel                 | 0       |
-|     xor_ln228_2_fu_1272_p2                                  |     |        | xor_ln228_2              | xor       | auto                     | 0       |
-|     mul_4ns_8ns_12_1_1_U79                                  |     |        | mul_ln229_2              | mul       | auto                     | 0       |
-|     w_2_fu_1311_p2                                          |     |        | w_2                      | sub       | fabric                   | 0       |
-|     icmp_ln181_2_fu_1401_p2                                 |     |        | icmp_ln181_2             | setlt     | auto                     | 0       |
-|     select_ln180_2_fu_1406_p3                               |     |        | select_ln180_2           | select    | auto_sel                 | 0       |
-|     icmp_ln160_3_fu_864_p2                                  |     |        | icmp_ln160_3             | seteq     | auto                     | 0       |
-|     dt_3_fu_572_p2                                          |     |        | dt_3                     | sub       | fabric                   | 0       |
-|     icmp_ln166_3_fu_587_p2                                  |     |        | icmp_ln166_3             | setne     | auto                     | 0       |
-|     sparsemux_33_4_8_1_1_U75                                |     |        | zext_ln170_9_cast        | sparsemux | compactencoding_dontcare | 0       |
-|     mul_8ns_8ns_16_1_1_U76                                  |     |        | mul_ln170_3              | mul       | auto                     | 0       |
-|     or_ln166_3_fu_1071_p2                                   |     |        | or_ln166_3               | or        | auto                     | 0       |
-|     post_trace_val_7_fu_1075_p3                             |     |        | post_trace_val_7         | select    | auto_sel                 | 0       |
-|     icmp_ln221_3_fu_1083_p2                                 |     |        | icmp_ln221_3             | seteq     | auto                     | 0       |
-|     current_w_3_fu_1146_p3                                  |     |        | current_w_3              | select    | auto_sel                 | 0       |
-|     xor_ln228_3_fu_1324_p2                                  |     |        | xor_ln228_3              | xor       | auto                     | 0       |
-|     mul_4ns_8ns_12_1_1_U80                                  |     |        | mul_ln229_3              | mul       | auto                     | 0       |
-|     w_3_fu_1363_p2                                          |     |        | w_3                      | sub       | fabric                   | 0       |
-|     icmp_ln181_3_fu_1415_p2                                 |     |        | icmp_ln181_3             | setlt     | auto                     | 0       |
-|     select_ln180_3_fu_1420_p3                               |     |        | select_ln180_3           | select    | auto_sel                 | 0       |
-|     add_ln212_fu_486_p2                                     |     |        | add_ln212                | add       | fabric                   | 0       |
-|  + process_post_spike_aer                                   | 0   |        |                          |           |                          |         |
-|    sparsemux_9_2_8_1_1_U164                                 |     |        | old_post_trace           | sparsemux | compactencoding_dontcare | 0       |
-|    sparsemux_9_2_16_1_1_U163                                |     |        | old_post_last_spike_time | sparsemux | compactencoding_dontcare | 0       |
-|    icmp_ln160_fu_528_p2                                     |     |        | icmp_ln160               | seteq     | auto                     | 0       |
-|    dt_fu_431_p2                                             |     |        | dt                       | sub       | fabric                   | 0       |
-|    icmp_ln166_fu_446_p2                                     |     |        | icmp_ln166               | setne     | auto                     | 0       |
-|    sparsemux_33_4_8_1_1_U165                                |     |        | zext_ln170_10_cast       | sparsemux | compactencoding_dontcare | 0       |
-|    mul_8ns_8ns_16_1_1_U166                                  |     |        | mul_ln170                | mul       | auto                     | 0       |
-|    or_ln166_fu_555_p2                                       |     |        | or_ln166                 | or        | auto                     | 0       |
-|    decayed_post_1_fu_560_p3                                 |     |        | decayed_post_1           | select    | auto_sel                 | 0       |
-|    new_trace_fu_572_p2                                      |     |        | new_trace                | add       | fabric                   | 0       |
-|    select_ln257_fu_590_p3                                   |     |        | select_ln257             | select    | auto_sel                 | 0       |
-|   + process_post_spike_aer_Pipeline_LTP_LOOP                | 0   |        |                          |           |                          |         |
-|     icmp_ln268_fu_512_p2                                    |     |        | icmp_ln268               | setne     | auto                     | 0       |
-|     pre_t_trace_1_fu_529_p3                                 |     |        | pre_t_trace_1            | select    | auto_sel                 | 0       |
-|     pre_t_last_spike_time_1_fu_536_p3                       |     |        | pre_t_last_spike_time_1  | select    | auto_sel                 | 0       |
-|     icmp_ln160_fu_595_p2                                    |     |        | icmp_ln160               | seteq     | auto                     | 0       |
-|     dt_fu_543_p2                                            |     |        | dt                       | sub       | fabric                   | 0       |
-|     icmp_ln166_fu_600_p2                                    |     |        | icmp_ln166               | setne     | auto                     | 0       |
-|     sparsemux_33_4_8_1_1_U135                               |     |        | zext_ln170_12_cast       | sparsemux | compactencoding_dontcare | 0       |
-|     mul_8ns_8ns_16_1_1_U136                                 |     |        | mul_ln170                | mul       | auto                     | 0       |
-|     or_ln166_fu_810_p2                                      |     |        | or_ln166                 | or        | auto                     | 0       |
-|     pre_trace_val_1_fu_814_p3                               |     |        | pre_trace_val_1          | select    | auto_sel                 | 0       |
-|     icmp_ln272_fu_822_p2                                    |     |        | icmp_ln272               | seteq     | auto                     | 0       |
-|     sparsemux_9_2_4_1_1_U139                                |     |        | current_w                | sparsemux | compactencoding_dontcare | 0       |
-|     distance_fu_896_p2                                      |     |        | distance                 | sub       | fabric                   | 0       |
-|     mul_4ns_8ns_12_1_1_U141                                 |     |        | mul_ln280                | mul       | auto                     | 0       |
-|     add_ln283_fu_960_p2                                     |     |        | add_ln283                | add       | fabric                   | 0       |
-|     w_fu_965_p2                                             |     |        | w                        | add       | fabric                   | 0       |
-|     icmp_ln180_fu_1031_p2                                   |     |        | icmp_ln180               | setgt     | auto                     | 0       |
-|     select_ln180_fu_1036_p3                                 |     |        | select_ln180             | select    | auto_sel                 | 0       |
-|     pre_t_trace_fu_562_p3                                   |     |        | pre_t_trace              | select    | auto_sel                 | 0       |
-|     pre_t_last_spike_time_fu_569_p3                         |     |        | pre_t_last_spike_time    | select    | auto_sel                 | 0       |
-|     icmp_ln160_4_fu_689_p2                                  |     |        | icmp_ln160_4             | seteq     | auto                     | 0       |
-|     dt_4_fu_576_p2                                          |     |        | dt_4                     | sub       | fabric                   | 0       |
-|     icmp_ln166_4_fu_694_p2                                  |     |        | icmp_ln166_4             | setne     | auto                     | 0       |
-|     sparsemux_33_4_8_1_1_U137                               |     |        | zext_ln170_14_cast       | sparsemux | compactencoding_dontcare | 0       |
-|     mul_8ns_8ns_16_1_1_U138                                 |     |        | mul_ln170_4              | mul       | auto                     | 0       |
-|     or_ln166_4_fu_846_p2                                    |     |        | or_ln166_4               | or        | auto                     | 0       |
-|     pre_trace_val_3_fu_850_p3                               |     |        | pre_trace_val_3          | select    | auto_sel                 | 0       |
-|     icmp_ln272_1_fu_858_p2                                  |     |        | icmp_ln272_1             | seteq     | auto                     | 0       |
-|     sparsemux_9_2_4_1_1_U140                                |     |        | current_w_4              | sparsemux | compactencoding_dontcare | 0       |
-|     distance_4_fu_925_p2                                    |     |        | distance_4               | sub       | fabric                   | 0       |
-|     mul_4ns_8ns_12_1_1_U142                                 |     |        | mul_ln280_1              | mul       | auto                     | 0       |
-|     add_ln283_2_fu_1010_p2                                  |     |        | add_ln283_2              | add       | fabric                   | 0       |
-|     w_4_fu_1015_p2                                          |     |        | w_4                      | add       | fabric                   | 0       |
-|     icmp_ln180_1_fu_1047_p2                                 |     |        | icmp_ln180_1             | setgt     | auto                     | 0       |
-|     select_ln180_4_fu_1052_p3                               |     |        | select_ln180_4           | select    | auto_sel                 | 0       |
-|     add_ln263_fu_518_p2                                     |     |        | add_ln263                | add       | fabric                   | 0       |
-|  + apply_rstdp_reward                                       | 0   |        |                          |           |                          |         |
-|    icmp_ln303_fu_221_p2                                     |     |        | icmp_ln303               | setne     | auto                     | 0       |
-|    and_ln303_fu_227_p2                                      |     |        | and_ln303                | and       | auto                     | 0       |
-|    reward_mag_fu_241_p2                                     |     |        | reward_mag               | sub       | fabric                   | 0       |
-|    reward_mag_1_fu_247_p3                                   |     |        | reward_mag_1             | select    | auto_sel                 | 0       |
-|    icmp_ln310_fu_265_p2                                     |     |        | icmp_ln310               | setne     | auto                     | 0       |
-|    icmp_ln311_fu_281_p2                                     |     |        | icmp_ln311               | setne     | auto                     | 0       |
-|    icmp_ln312_fu_297_p2                                     |     |        | icmp_ln312               | setne     | auto                     | 0       |
-|    shift_sel_fu_331_p6                                      |     |        | select_ln312             | select    | auto_sel                 | 0       |
-|    xor_ln310_fu_311_p2                                      |     |        | xor_ln310                | xor       | auto                     | 0       |
-|    and_ln311_fu_317_p2                                      |     |        | and_ln311                | and       | auto                     | 0       |
-|    sparsemux_7_2_2_1_1_U222                                 |     |        | shift_sel                | sparsemux | onehotencoding_realdef   | 0       |
-|    icmp_ln336_fu_356_p2                                     |     |        | icmp_ln336               | seteq     | auto                     | 0       |
-|    icmp_ln336_1_fu_361_p2                                   |     |        | icmp_ln336_1             | seteq     | auto                     | 0       |
-|    icmp_ln336_2_fu_366_p2                                   |     |        | icmp_ln336_2             | seteq     | auto                     | 0       |
-|    icmp_ln318_fu_374_p2                                     |     |        | icmp_ln318               | seteq     | auto                     | 0       |
-|    add_ln318_fu_380_p2                                      |     |        | add_ln318                | add       | fabric                   | 0       |
-|    sparsemux_9_2_8_1_1_U223                                 |     |        | pre_elig                 | sparsemux | compactencoding_dontcare | 0       |
-|    icmp_ln322_fu_440_p2                                     |     |        | icmp_ln322               | seteq     | auto                     | 0       |
-|   + apply_rstdp_reward_Pipeline_RSTDP_INNER                 | 0   |        |                          |           |                          |         |
-|     icmp_ln329_fu_419_p2                                    |     |        | icmp_ln329               | seteq     | auto                     | 0       |
-|     mul_8s_8s_16_1_1_U193                                   |     |        | mul_ln332                | mul       | auto                     | 0       |
-|     sparsemux_9_3_7_1_1_U194                                |     |        | scaled_4                 | sparsemux | onehotencoding_realdef   | 0       |
-|     delta_fu_838_p2                                         |     |        | delta                    | sub       | fabric                   | 0       |
-|     delta_1_fu_844_p3                                       |     |        | delta_1                  | select    | auto_sel                 | 0       |
-|     current_w_fu_851_p3                                     |     |        | current_w                | select    | auto_sel                 | 0       |
-|     w_fu_862_p2                                             |     |        | w                        | add       | fabric                   | 0       |
-|     icmp_ln180_fu_1007_p2                                   |     |        | icmp_ln180               | setgt     | auto                     | 0       |
-|     icmp_ln181_fu_1012_p2                                   |     |        | icmp_ln181               | setlt     | auto                     | 0       |
-|     select_ln180_8_fu_1020_p3                               |     |        | select_ln180_8           | select    | auto_sel                 | 0       |
-|     or_ln180_fu_1028_p2                                     |     |        | or_ln180                 | or        | auto                     | 0       |
-|     select_ln180_fu_1034_p3                                 |     |        | select_ln180             | select    | auto_sel                 | 0       |
-|     icmp_ln329_1_fu_425_p2                                  |     |        | icmp_ln329_1             | seteq     | auto                     | 0       |
-|     mul_8s_8s_16_1_1_U195                                   |     |        | mul_ln332_1              | mul       | auto                     | 0       |
-|     sparsemux_9_3_7_1_1_U196                                |     |        | scaled_9                 | sparsemux | onehotencoding_realdef   | 0       |
-|     delta_2_fu_881_p2                                       |     |        | delta_2                  | sub       | fabric                   | 0       |
-|     delta_3_fu_887_p3                                       |     |        | delta_3                  | select    | auto_sel                 | 0       |
-|     current_w_5_fu_894_p3                                   |     |        | current_w_5              | select    | auto_sel                 | 0       |
-|     w_5_fu_905_p2                                           |     |        | w_5                      | add       | fabric                   | 0       |
-|     icmp_ln180_2_fu_1044_p2                                 |     |        | icmp_ln180_2             | setgt     | auto                     | 0       |
-|     icmp_ln181_4_fu_1049_p2                                 |     |        | icmp_ln181_4             | setlt     | auto                     | 0       |
-|     select_ln180_9_fu_1057_p3                               |     |        | select_ln180_9           | select    | auto_sel                 | 0       |
-|     or_ln180_1_fu_1065_p2                                   |     |        | or_ln180_1               | or        | auto                     | 0       |
-|     select_ln180_5_fu_1071_p3                               |     |        | select_ln180_5           | select    | auto_sel                 | 0       |
-|     icmp_ln329_2_fu_431_p2                                  |     |        | icmp_ln329_2             | seteq     | auto                     | 0       |
-|     mul_8s_8s_16_1_1_U197                                   |     |        | mul_ln332_2              | mul       | auto                     | 0       |
-|     sparsemux_9_3_7_1_1_U198                                |     |        | scaled_14                | sparsemux | onehotencoding_realdef   | 0       |
-|     delta_4_fu_924_p2                                       |     |        | delta_4                  | sub       | fabric                   | 0       |
-|     delta_5_fu_930_p3                                       |     |        | delta_5                  | select    | auto_sel                 | 0       |
-|     current_w_6_fu_937_p3                                   |     |        | current_w_6              | select    | auto_sel                 | 0       |
-|     w_6_fu_948_p2                                           |     |        | w_6                      | add       | fabric                   | 0       |
-|     icmp_ln180_3_fu_1081_p2                                 |     |        | icmp_ln180_3             | setgt     | auto                     | 0       |
-|     icmp_ln181_5_fu_1086_p2                                 |     |        | icmp_ln181_5             | setlt     | auto                     | 0       |
-|     select_ln180_10_fu_1094_p3                              |     |        | select_ln180_10          | select    | auto_sel                 | 0       |
-|     or_ln180_2_fu_1102_p2                                   |     |        | or_ln180_2               | or        | auto                     | 0       |
-|     select_ln180_6_fu_1108_p3                               |     |        | select_ln180_6           | select    | auto_sel                 | 0       |
-|     icmp_ln329_3_fu_437_p2                                  |     |        | icmp_ln329_3             | seteq     | auto                     | 0       |
-|     mul_8s_8s_16_1_1_U199                                   |     |        | mul_ln332_3              | mul       | auto                     | 0       |
-|     sparsemux_9_3_7_1_1_U200                                |     |        | scaled_19                | sparsemux | onehotencoding_realdef   | 0       |
-|     delta_6_fu_967_p2                                       |     |        | delta_6                  | sub       | fabric                   | 0       |
-|     delta_7_fu_973_p3                                       |     |        | delta_7                  | select    | auto_sel                 | 0       |
-|     current_w_7_fu_980_p3                                   |     |        | current_w_7              | select    | auto_sel                 | 0       |
-|     w_7_fu_991_p2                                           |     |        | w_7                      | add       | fabric                   | 0       |
-|     icmp_ln180_4_fu_1118_p2                                 |     |        | icmp_ln180_4             | setgt     | auto                     | 0       |
-|     icmp_ln181_6_fu_1123_p2                                 |     |        | icmp_ln181_6             | setlt     | auto                     | 0       |
-|     select_ln180_11_fu_1131_p3                              |     |        | select_ln180_11          | select    | auto_sel                 | 0       |
-|     or_ln180_3_fu_1139_p2                                   |     |        | or_ln180_3               | or        | auto                     | 0       |
-|     select_ln180_7_fu_1145_p3                               |     |        | select_ln180_7           | select    | auto_sel                 | 0       |
-|     add_ln324_fu_408_p2                                     |     |        | add_ln324                | add       | fabric                   | 0       |
-|  + decay_eligibility_traces                                 | 0   |        |                          |           |                          |         |
-|   + decay_eligibility_traces_Pipeline_DECAY_PRE             | 0   |        |                          |           |                          |         |
-|     sub_ln367_fu_189_p2                                     |     |        | sub_ln367                | sub       | fabric                   | 0       |
-|     sub_ln367_1_fu_209_p2                                   |     |        | sub_ln367_1              | sub       | fabric                   | 0       |
-|     sub_ln367_2_fu_229_p2                                   |     |        | sub_ln367_2              | sub       | fabric                   | 0       |
-|     sub_ln367_3_fu_249_p2                                   |     |        | sub_ln367_3              | sub       | fabric                   | 0       |
-|     add_ln361_fu_164_p2                                     |     |        | add_ln361                | add       | fabric                   | 0       |
-|   + decay_eligibility_traces_Pipeline_DECAY_POST            | 0   |        |                          |           |                          |         |
-|     sub_ln376_fu_189_p2                                     |     |        | sub_ln376                | sub       | fabric                   | 0       |
-|     sub_ln376_1_fu_209_p2                                   |     |        | sub_ln376_1              | sub       | fabric                   | 0       |
-|     sub_ln376_2_fu_229_p2                                   |     |        | sub_ln376_2              | sub       | fabric                   | 0       |
-|     sub_ln376_3_fu_249_p2                                   |     |        | sub_ln376_3              | sub       | fabric                   | 0       |
-|     add_ln371_fu_164_p2                                     |     |        | add_ln371                | add       | fabric                   | 0       |
-+-------------------------------------------------------------+-----+--------+--------------------------+-----------+--------------------------+---------+
++--------------------------------------------------+-----+--------+-----------------+-----------+------------------------+---------+
+| Name                                             | DSP | Pragma | Variable        | Op        | Impl                   | Latency |
++--------------------------------------------------+-----+--------+-----------------+-----------+------------------------+---------+
+| + snn_top_hls                                    | 13  |        |                 |           |                        |         |
+|   checkpoint_mode_fu_1820_p2                     |     |        | checkpoint_mode | seteq     | auto                   | 0       |
+|   stdp_mode_fu_1826_p2                           |     |        | stdp_mode       | seteq     | auto                   | 0       |
+|   stdp_active_fu_1832_p2                         |     |        | stdp_active     | and       | auto                   | 0       |
+|   icmp_ln738_fu_1838_p2                          |     |        | icmp_ln738      | seteq     | auto                   | 0       |
+|   time_steps_1_fu_1848_p3                        |     |        | time_steps_1    | select    | auto_sel               | 0       |
+|   xor_ln757_fu_1884_p2                           |     |        | xor_ln757       | xor       | auto                   | 0       |
+|   or_ln757_fu_1890_p2                            |     |        | or_ln757        | or        | auto                   | 0       |
+|   icmp_ln371_fu_2026_p2                          |     |        | icmp_ln371      | setlt     | auto                   | 0       |
+|   icmp_ln371_1_fu_2032_p2                        |     |        | icmp_ln371_1    | setlt     | auto                   | 0       |
+|   icmp_ln371_2_fu_2038_p2                        |     |        | icmp_ln371_2    | setlt     | auto                   | 0       |
+|   icmp_ln371_3_fu_2044_p2                        |     |        | icmp_ln371_3    | setlt     | auto                   | 0       |
+|   icmp_ln371_4_fu_2050_p2                        |     |        | icmp_ln371_4    | setlt     | auto                   | 0       |
+|   icmp_ln371_5_fu_2056_p2                        |     |        | icmp_ln371_5    | setlt     | auto                   | 0       |
+|   icmp_ln371_6_fu_2062_p2                        |     |        | icmp_ln371_6    | setlt     | auto                   | 0       |
+|   icmp_ln371_7_fu_2068_p2                        |     |        | icmp_ln371_7    | setlt     | auto                   | 0       |
+|   icmp_ln371_8_fu_2074_p2                        |     |        | icmp_ln371_8    | setlt     | auto                   | 0       |
+|   g_0_i_i8_fu_2192_p18                           |     |        | select_ln371    | select    | auto_sel               | 0       |
+|   xor_ln371_fu_2088_p2                           |     |        | xor_ln371       | xor       | auto                   | 0       |
+|   and_ln371_fu_2094_p2                           |     |        | and_ln371       | and       | auto                   | 0       |
+|   xor_ln371_1_fu_2100_p2                         |     |        | xor_ln371_1     | xor       | auto                   | 0       |
+|   and_ln371_1_fu_2106_p2                         |     |        | and_ln371_1     | and       | auto                   | 0       |
+|   xor_ln371_2_fu_2112_p2                         |     |        | xor_ln371_2     | xor       | auto                   | 0       |
+|   and_ln371_2_fu_2118_p2                         |     |        | and_ln371_2     | and       | auto                   | 0       |
+|   xor_ln371_3_fu_2124_p2                         |     |        | xor_ln371_3     | xor       | auto                   | 0       |
+|   and_ln371_3_fu_2130_p2                         |     |        | and_ln371_3     | and       | auto                   | 0       |
+|   xor_ln371_4_fu_2136_p2                         |     |        | xor_ln371_4     | xor       | auto                   | 0       |
+|   and_ln371_4_fu_2142_p2                         |     |        | and_ln371_4     | and       | auto                   | 0       |
+|   xor_ln371_5_fu_2148_p2                         |     |        | xor_ln371_5     | xor       | auto                   | 0       |
+|   and_ln371_5_fu_2154_p2                         |     |        | and_ln371_5     | and       | auto                   | 0       |
+|   xor_ln371_6_fu_2160_p2                         |     |        | xor_ln371_6     | xor       | auto                   | 0       |
+|   and_ln371_6_fu_2166_p2                         |     |        | and_ln371_6     | and       | auto                   | 0       |
+|   sparsemux_19_8_4_1_1_U179                      |     |        | g_0_i_i8        | sparsemux | onehotencoding_realdef | 0       |
+|   src_g_fu_2240_p3                               |     |        | src_g           | select    | auto_sel               | 0       |
+|   icmp_ln371_9_fu_2248_p2                        |     |        | icmp_ln371_9    | setlt     | auto                   | 0       |
+|   icmp_ln371_10_fu_2254_p2                       |     |        | icmp_ln371_10   | setlt     | auto                   | 0       |
+|   icmp_ln371_11_fu_2260_p2                       |     |        | icmp_ln371_11   | setlt     | auto                   | 0       |
+|   icmp_ln371_12_fu_2266_p2                       |     |        | icmp_ln371_12   | setlt     | auto                   | 0       |
+|   icmp_ln371_13_fu_2272_p2                       |     |        | icmp_ln371_13   | setlt     | auto                   | 0       |
+|   icmp_ln371_14_fu_2278_p2                       |     |        | icmp_ln371_14   | setlt     | auto                   | 0       |
+|   icmp_ln371_15_fu_2284_p2                       |     |        | icmp_ln371_15   | setlt     | auto                   | 0       |
+|   icmp_ln371_16_fu_2290_p2                       |     |        | icmp_ln371_16   | setlt     | auto                   | 0       |
+|   icmp_ln371_17_fu_2296_p2                       |     |        | icmp_ln371_17   | setlt     | auto                   | 0       |
+|   g_0_i23_i6_fu_2414_p18                         |     |        | select_ln371_1  | select    | auto_sel               | 0       |
+|   xor_ln371_7_fu_2310_p2                         |     |        | xor_ln371_7     | xor       | auto                   | 0       |
+|   and_ln371_7_fu_2316_p2                         |     |        | and_ln371_7     | and       | auto                   | 0       |
+|   xor_ln371_8_fu_2322_p2                         |     |        | xor_ln371_8     | xor       | auto                   | 0       |
+|   and_ln371_8_fu_2328_p2                         |     |        | and_ln371_8     | and       | auto                   | 0       |
+|   xor_ln371_9_fu_2334_p2                         |     |        | xor_ln371_9     | xor       | auto                   | 0       |
+|   and_ln371_9_fu_2340_p2                         |     |        | and_ln371_9     | and       | auto                   | 0       |
+|   xor_ln371_10_fu_2346_p2                        |     |        | xor_ln371_10    | xor       | auto                   | 0       |
+|   and_ln371_10_fu_2352_p2                        |     |        | and_ln371_10    | and       | auto                   | 0       |
+|   xor_ln371_11_fu_2358_p2                        |     |        | xor_ln371_11    | xor       | auto                   | 0       |
+|   and_ln371_11_fu_2364_p2                        |     |        | and_ln371_11    | and       | auto                   | 0       |
+|   xor_ln371_12_fu_2370_p2                        |     |        | xor_ln371_12    | xor       | auto                   | 0       |
+|   and_ln371_12_fu_2376_p2                        |     |        | and_ln371_12    | and       | auto                   | 0       |
+|   xor_ln371_13_fu_2382_p2                        |     |        | xor_ln371_13    | xor       | auto                   | 0       |
+|   and_ln371_13_fu_2388_p2                        |     |        | and_ln371_13    | and       | auto                   | 0       |
+|   sparsemux_19_8_4_1_1_U180                      |     |        | g_0_i23_i6      | sparsemux | onehotencoding_realdef | 0       |
+|   dst_g_fu_2462_p3                               |     |        | dst_g           | select    | auto_sel               | 0       |
+|   icmp_ln384_fu_2470_p2                          |     |        | icmp_ln384      | seteq     | auto                   | 0       |
+|   icmp_ln385_fu_2476_p2                          |     |        | icmp_ln385      | seteq     | auto                   | 0       |
+|   and_ln384_fu_2482_p2                           |     |        | and_ln384       | and       | auto                   | 0       |
+|   icmp_ln384_1_fu_2488_p2                        |     |        | icmp_ln384_1    | seteq     | auto                   | 0       |
+|   icmp_ln385_1_fu_2494_p2                        |     |        | icmp_ln385_1    | seteq     | auto                   | 0       |
+|   and_ln384_1_fu_2500_p2                         |     |        | and_ln384_1     | and       | auto                   | 0       |
+|   icmp_ln384_2_fu_2506_p2                        |     |        | icmp_ln384_2    | seteq     | auto                   | 0       |
+|   icmp_ln385_2_fu_2512_p2                        |     |        | icmp_ln385_2    | seteq     | auto                   | 0       |
+|   and_ln384_2_fu_2518_p2                         |     |        | and_ln384_2     | and       | auto                   | 0       |
+|   icmp_ln384_3_fu_2524_p2                        |     |        | icmp_ln384_3    | seteq     | auto                   | 0       |
+|   icmp_ln385_3_fu_2530_p2                        |     |        | icmp_ln385_3    | seteq     | auto                   | 0       |
+|   and_ln384_3_fu_2536_p2                         |     |        | and_ln384_3     | and       | auto                   | 0       |
+|   icmp_ln384_4_fu_2542_p2                        |     |        | icmp_ln384_4    | seteq     | auto                   | 0       |
+|   icmp_ln385_4_fu_2548_p2                        |     |        | icmp_ln385_4    | seteq     | auto                   | 0       |
+|   and_ln384_4_fu_2572_p2                         |     |        | and_ln384_4     | and       | auto                   | 0       |
+|   icmp_ln384_5_fu_2554_p2                        |     |        | icmp_ln384_5    | seteq     | auto                   | 0       |
+|   and_ln384_5_fu_2576_p2                         |     |        | and_ln384_5     | and       | auto                   | 0       |
+|   icmp_ln384_6_fu_2560_p2                        |     |        | icmp_ln384_6    | seteq     | auto                   | 0       |
+|   and_ln384_6_fu_2580_p2                         |     |        | and_ln384_6     | and       | auto                   | 0       |
+|   icmp_ln384_7_fu_2566_p2                        |     |        | icmp_ln384_7    | seteq     | auto                   | 0       |
+|   and_ln384_7_fu_2584_p2                         |     |        | and_ln384_7     | and       | auto                   | 0       |
+|   xor_ln384_fu_2588_p2                           |     |        | xor_ln384       | xor       | auto                   | 0       |
+|   and_ln384_8_fu_2593_p2                         |     |        | and_ln384_8     | and       | auto                   | 0       |
+|   or_ln384_fu_2598_p2                            |     |        | or_ln384        | or        | auto                   | 0       |
+|   xor_ln384_1_fu_2602_p2                         |     |        | xor_ln384_1     | xor       | auto                   | 0       |
+|   and_ln384_9_fu_2608_p2                         |     |        | and_ln384_9     | and       | auto                   | 0       |
+|   or_ln384_1_fu_2613_p2                          |     |        | or_ln384_1      | or        | auto                   | 0       |
+|   xor_ln384_2_fu_2618_p2                         |     |        | xor_ln384_2     | xor       | auto                   | 0       |
+|   and_ln384_10_fu_2624_p2                        |     |        | and_ln384_10    | and       | auto                   | 0       |
+|   or_ln384_2_fu_2629_p2                          |     |        | or_ln384_2      | or        | auto                   | 0       |
+|   xor_ln384_3_fu_2634_p2                         |     |        | xor_ln384_3     | xor       | auto                   | 0       |
+|   and_ln384_11_fu_2640_p2                        |     |        | and_ln384_11    | and       | auto                   | 0       |
+|   or_ln384_3_fu_2646_p2                          |     |        | or_ln384_3      | or        | auto                   | 0       |
+|   xor_ln384_4_fu_2652_p2                         |     |        | xor_ln384_4     | xor       | auto                   | 0       |
+|   and_ln384_12_fu_2658_p2                        |     |        | and_ln384_12    | and       | auto                   | 0       |
+|   or_ln384_4_fu_2664_p2                          |     |        | or_ln384_4      | or        | auto                   | 0       |
+|   xor_ln384_5_fu_2670_p2                         |     |        | xor_ln384_5     | xor       | auto                   | 0       |
+|   and_ln384_13_fu_2676_p2                        |     |        | and_ln384_13    | and       | auto                   | 0       |
+|   sparsemux_17_7_3_1_1_U181                      |     |        | conn_idx        | sparsemux | onehotencoding_realdef | 0       |
+|   local_src_fu_2779_p2                           |     |        | local_src       | sub       | fabric                 | 0       |
+|   local_dst_fu_2793_p2                           |     |        | local_dst       | sub       | fabric                 | 0       |
+|   mac_muladd_14s_11ns_14s_24_4_1_U182            | 1   |        | mul_ln406       | mul       | dsp_slice              | 3       |
+|   mac_muladd_14s_11ns_14s_24_4_1_U182            | 1   |        | add_ln406       | add       | dsp_slice              | 3       |
+|   add_ln406_1_fu_2809_p2                         |     |        | add_ln406_1     | add       | fabric                 | 0       |
+|   or_ln384_5_fu_2747_p2                          |     |        | or_ln384_5      | or        | auto                   | 0       |
+|   or_ln384_6_fu_2753_p2                          |     |        | or_ln384_6      | or        | auto                   | 0       |
+|   and_ln384_14_fu_2759_p2                        |     |        | and_ln384_14    | and       | auto                   | 0       |
+|   and_ln384_15_fu_2764_p2                        |     |        | and_ln384_15    | and       | auto                   | 0       |
+|   widx_fu_2814_p3                                |     |        | widx            | select    | auto_sel               | 0       |
+|   icmp_ln131_fu_2842_p2                          |     |        | icmp_ln131      | setne     | auto                   | 0       |
+|   select_ln131_fu_2857_p3                        |     |        | select_ln131    | select    | auto_sel               | 0       |
+|   xor_ln857_fu_2911_p2                           |     |        | xor_ln857       | xor       | auto                   | 0       |
+|   or_ln857_fu_2916_p2                            |     |        | or_ln857        | or        | auto                   | 0       |
+|   icmp_ln873_fu_2922_p2                          |     |        | icmp_ln873      | setne     | auto                   | 0       |
+|   and_ln873_fu_2927_p2                           |     |        | and_ln873       | and       | auto                   | 0       |
+|   xor_ln909_fu_2951_p2                           |     |        | xor_ln909       | xor       | auto                   | 0       |
+|   xor_ln909_1_fu_2956_p2                         |     |        | xor_ln909_1     | xor       | auto                   | 0       |
+|   or_ln909_fu_2961_p2                            |     |        | or_ln909        | or        | auto                   | 0       |
+|   xor_ln961_fu_2967_p2                           |     |        | xor_ln961       | xor       | auto                   | 0       |
+|   or_ln961_fu_2972_p2                            |     |        | or_ln961        | or        | auto                   | 0       |
+|   xor_ln977_fu_2978_p2                           |     |        | xor_ln977       | xor       | auto                   | 0       |
+|   or_ln977_fu_2983_p2                            |     |        | or_ln977        | or        | auto                   | 0       |
+|   and_ln1028_fu_2989_p2                          |     |        | and_ln1028      | and       | auto                   | 0       |
+|   xor_ln1028_fu_2993_p2                          |     |        | xor_ln1028      | xor       | auto                   | 0       |
+|   or_ln1041_fu_2999_p2                           |     |        | or_ln1041       | or        | auto                   | 0       |
+|   xor_ln1028_1_fu_3003_p2                        |     |        | xor_ln1028_1    | xor       | auto                   | 0       |
+|   or_ln1028_fu_3008_p2                           |     |        | or_ln1028       | or        | auto                   | 0       |
+|   xor_ln900_fu_3014_p2                           |     |        | xor_ln900       | xor       | auto                   | 0       |
+|   or_ln900_fu_3020_p2                            |     |        | or_ln900        | or        | auto                   | 0       |
+|   icmp_ln1057_not_fu_3025_p2                     |     |        | icmp_ln1057_not | setne     | auto                   | 0       |
+|   not_or_ln1057_fu_3030_p2                       |     |        | not_or_ln1057   | and       | auto                   | 0       |
+|   icmp_ln884_fu_3062_p2                          |     |        | icmp_ln884      | seteq     | auto                   | 0       |
+|   t_2_fu_3067_p2                                 |     |        | t_2             | add       | fabric                 | 0       |
+|   and_ln888_fu_3073_p2                           |     |        | and_ln888       | and       | auto                   | 0       |
+|   new_elig_fu_3225_p2                            |     |        | new_elig        | add       | fabric                 | 0       |
+|   icmp_ln533_fu_3241_p2                          |     |        | icmp_ln533      | seteq     | auto                   | 0       |
+|   select_ln533_fu_3251_p3                        |     |        | select_ln533    | select    | auto_sel               | 0       |
+|   grp_fu_1652_p2                                 |     |        | add_ln945       | add       | fabric                 | 0       |
+|   add_ln948_fu_3260_p2                           |     |        | add_ln948       | add       | fabric                 | 0       |
+|   xor_ln1011_fu_3353_p2                          |     |        | xor_ln1011      | xor       | auto                   | 0       |
+|   new_elig_1_fu_3374_p2                          |     |        | new_elig_1      | add       | fabric                 | 0       |
+|   icmp_ln540_fu_3390_p2                          |     |        | icmp_ln540      | seteq     | auto                   | 0       |
+|   select_ln540_fu_3400_p3                        |     |        | select_ln540    | select    | auto_sel               | 0       |
+|   grp_fu_1652_p2                                 |     |        | add_ln1022      | add       | fabric                 | 0       |
+|   and_ln1028_1_fu_3409_p2                        |     |        | and_ln1028_1    | and       | auto                   | 0       |
+|   full_last_fu_3438_p2                           |     |        | full_last       | setgt     | auto                   | 0       |
+|   next_pos_fu_3448_p2                            |     |        | next_pos        | add       | fabric                 | 0       |
+|   icmp_ln1059_fu_3454_p2                         |     |        | icmp_ln1059     | setlt     | auto                   | 0       |
+|   chunk_last_fu_3459_p2                          |     |        | chunk_last      | xor       | auto                   | 0       |
+|   chunk_last_1_fu_3465_p2                        |     |        | chunk_last_1    | and       | auto                   | 0       |
+|   w_pkt_last_fu_3470_p2                          |     |        | w_pkt_last      | or        | auto                   | 0       |
+|   add_ln1067_fu_3476_p2                          |     |        | add_ln1067      | add       | fabric                 | 0       |
+|   icmp_ln1068_fu_3482_p2                         |     |        | icmp_ln1068     | setgt     | auto                   | 0       |
+|   select_ln1068_fu_3488_p3                       |     |        | select_ln1068   | select    | auto_sel               | 0       |
+|   select_ln1071_fu_3502_p3                       |     |        | select_ln1071   | select    | auto_sel               | 0       |
+|   add_ln1079_fu_3532_p2                          |     |        | add_ln1079      | add       | fabric                 | 0       |
+|   icmp_ln884_1_fu_3087_p2                        |     |        | icmp_ln884_1    | seteq     | auto                   | 0       |
+|   or_ln1106_fu_3125_p2                           |     |        | or_ln1106       | or        | auto                   | 0       |
+|   and_ln1106_fu_3131_p2                          |     |        | and_ln1106      | and       | auto                   | 0       |
+|  + snn_top_hls_Pipeline_RESET_ELIG               | 0   |        |                 |           |                        |         |
+|    icmp_ln782_fu_90_p2                           |     |        | icmp_ln782      | seteq     | auto                   | 0       |
+|    add_ln782_fu_96_p2                            |     |        | add_ln782       | add       | fabric                 | 0       |
+|  + snn_top_hls_Pipeline_RESET_TRACES             | 0   |        |                 |           |                        |         |
+|    icmp_ln790_fu_90_p2                           |     |        | icmp_ln790      | seteq     | auto                   | 0       |
+|    add_ln790_fu_96_p2                            |     |        | add_ln790       | add       | fabric                 | 0       |
+|  + snn_top_hls_Pipeline_RESET_ENCODER            | 0   |        |                 |           |                        |         |
+|    icmp_ln797_fu_94_p2                           |     |        | icmp_ln797      | seteq     | auto                   | 0       |
+|    add_ln797_fu_100_p2                           |     |        | add_ln797       | add       | fabric                 | 0       |
+|  + snn_top_hls_Pipeline_INIT_WEIGHT              | 0   |        |                 |           |                        |         |
+|    icmp_ln804_fu_66_p2                           |     |        | icmp_ln804      | seteq     | auto                   | 0       |
+|    add_ln804_fu_72_p2                            |     |        | add_ln804       | add       | fabric                 | 0       |
+|  + snn_top_hls_Pipeline_LOAD_FRAME               | 0   |        |                 |           |                        |         |
+|    add_ln858_fu_174_p2                           |     |        | add_ln858       | add       | fabric                 | 0       |
+|    xor_ln867_fu_248_p2                           |     |        | xor_ln867       | xor       | auto                   | 0       |
+|    icmp_ln858_fu_254_p2                          |     |        | icmp_ln858      | setlt     | auto                   | 0       |
+|    or_cond75_fu_260_p2                           |     |        | or_cond75       | and       | auto                   | 0       |
+|  + decay_all_traces                              | 2   |        |                 |           |                        |         |
+|   + decay_all_traces_Pipeline_DECAY_PRE_TRACE    | 1   |        |                 |           |                        |         |
+|     icmp_ln209_fu_101_p2                         |     |        | icmp_ln209      | seteq     | auto                   | 0       |
+|     add_ln209_fu_107_p2                          |     |        | add_ln209       | add       | fabric                 | 0       |
+|     mul_8ns_8ns_16_3_1_U17                       | 1   | yes    | mul_decay_pre   | mul       | dsp                    | 2       |
+|     sub_ln215_fu_142_p2                          |     |        | sub_ln215       | sub       | fabric                 | 0       |
+|   + decay_all_traces_Pipeline_DECAY_POST_TRACE   | 1   |        |                 |           |                        |         |
+|     icmp_ln217_fu_101_p2                         |     |        | icmp_ln217      | seteq     | auto                   | 0       |
+|     add_ln217_fu_107_p2                          |     |        | add_ln217       | add       | fabric                 | 0       |
+|     mul_8ns_8ns_16_3_1_U21                       | 1   | yes    | mul_decay_post  | mul       | dsp                    | 2       |
+|     sub_ln223_fu_142_p2                          |     |        | sub_ln223       | sub       | fabric                 | 0       |
+|  + snn_top_hls_Pipeline_WEIGHT_SUM               | 0   |        |                 |           |                        |         |
+|    icmp_ln1135_fu_85_p2                          |     |        | icmp_ln1135     | seteq     | auto                   | 0       |
+|    add_ln1135_fu_91_p2                           |     |        | add_ln1135      | add       | fabric                 | 0       |
+|    weight_sum_1_fu_114_p2                        |     |        | weight_sum_1    | add       | fabric                 | 0       |
+|  + snn_top_hls_Pipeline_ENCODER_LOOP             | 0   |        |                 |           |                        |         |
+|    icmp_ln99_fu_205_p2                           |     |        | icmp_ln99       | seteq     | auto                   | 0       |
+|    icmp_ln93_fu_219_p2                           |     |        | icmp_ln93       | seteq     | auto                   | 0       |
+|    ch_2_fu_225_p2                                |     |        | ch_2            | add       | fabric                 | 0       |
+|    icmp_ln95_fu_253_p2                           |     |        | icmp_ln95       | setlt     | auto                   | 0       |
+|    value_fu_267_p3                               |     |        | value           | select    | auto_sel               | 0       |
+|    select_ln69_fu_279_p3                         |     |        | select_ln69     | select    | auto_sel               | 0       |
+|    add_ln69_fu_287_p2                            |     |        | add_ln69        | add       | fabric                 | 0       |
+|    icmp_ln72_fu_293_p2                           |     |        | icmp_ln72       | setgt     | auto                   | 0       |
+|    sub_ln73_fu_298_p2                            |     |        | sub_ln73        | sub       | fabric                 | 0       |
+|    select_ln72_fu_303_p3                         |     |        | select_ln72     | select    | auto_sel               | 0       |
+|    icmp_ln77_fu_311_p2                           |     |        | icmp_ln77       | setlt     | auto                   | 0       |
+|    encoder_spike_counter_new_3_out               |     |        | add_ln55        | add       | fabric                 | 0       |
+|    sub_ln79_fu_315_p2                            |     |        | sub_ln79        | sub       | fabric                 | 0       |
+|  + process_pre_spike_aer                         | 4   |        |                 |           |                        |         |
+|    new_trace_fu_283_p2                           |     |        | new_trace       | add       | fabric                 | 0       |
+|    select_ln246_fu_301_p3                        |     |        | select_ln246    | select    | auto_sel               | 0       |
+|    icmp_ln254_fu_316_p2                          |     |        | icmp_ln254      | seteq     | auto                   | 0       |
+|    add_ln254_fu_322_p2                           |     |        | add_ln254       | add       | fabric                 | 0       |
+|    src_end_fu_346_p2                             |     |        | src_end         | add       | fabric                 | 0       |
+|    icmp_ln259_fu_352_p2                          |     |        | icmp_ln259      | setgt     | auto                   | 0       |
+|    icmp_ln259_1_fu_357_p2                        |     |        | icmp_ln259_1    | setlt     | auto                   | 0       |
+|    xor_ln259_fu_362_p2                           |     |        | xor_ln259       | xor       | auto                   | 0       |
+|    or_ln259_fu_368_p2                            |     |        | or_ln259        | or        | auto                   | 0       |
+|    local_src_fu_374_p2                           |     |        | local_src       | sub       | fabric                 | 0       |
+|    mac_muladd_14s_11ns_20ns_24_4_1_U66           | 1   |        | mul_ln262       | mul       | dsp_slice              | 3       |
+|    mac_muladd_14s_11ns_20ns_24_4_1_U66           | 1   |        | base_offset     | add       | dsp_slice              | 3       |
+|    add_ln265_fu_389_p2                           |     |        | add_ln265       | add       | fabric                 | 0       |
+|   + process_pre_spike_aer_Pipeline_LTD_LOOP      | 3   |        |                 |           |                        |         |
+|     icmp_ln265_fu_280_p2                         |     |        | icmp_ln265      | seteq     | auto                   | 0       |
+|     add_ln265_fu_285_p2                          |     |        | add_ln265       | add       | fabric                 | 0       |
+|     post_id_fu_295_p2                            |     |        | post_id         | add       | fabric                 | 0       |
+|     icmp_ln276_fu_325_p2                         |     |        | icmp_ln276      | seteq     | auto                   | 0       |
+|     xor_ln282_fu_425_p2                          |     |        | xor_ln282       | xor       | auto                   | 0       |
+|     mul_4ns_8ns_12_3_1_U41                       | 1   | yes    | mul_dt          | mul       | dsp                    | 2       |
+|     mul_12ns_16s_28_4_1_U42                      | 1   | yes    | mul_a           | mul       | dsp                    | 3       |
+|     mul_12s_16s_28_4_1_U43                       | 1   | yes    | mul_ln294       | mul       | dsp                    | 3       |
+|     w_fu_497_p2                                  |     |        | w               | sub       | fabric                 | 0       |
+|     icmp_ln131_fu_513_p2                         |     |        | icmp_ln131      | setgt     | auto                   | 0       |
+|     icmp_ln132_fu_519_p2                         |     |        | icmp_ln132      | setlt     | auto                   | 0       |
+|     select_ln131_fu_529_p3                       |     |        | select_ln131    | select    | auto_sel               | 0       |
+|     or_ln131_fu_537_p2                           |     |        | or_ln131        | or        | auto                   | 0       |
+|     updated_fu_543_p3                            |     |        | updated         | select    | auto_sel               | 0       |
+|     xor_ln163_fu_335_p2                          |     |        | xor_ln163       | xor       | auto                   | 0       |
+|     or_ln163_fu_341_p2                           |     |        | or_ln163        | or        | auto                   | 0       |
+|     or_ln168_fu_355_p2                           |     |        | or_ln168        | or        | auto                   | 0       |
+|     icmp_ln168_fu_360_p2                         |     |        | icmp_ln168      | seteq     | auto                   | 0       |
+|     learn_bridge_exc                             |     |        | exc             | xor       | auto                   | 0       |
+|     mag_1_fu_566_p2                              |     |        | mag_1           | sub       | fabric                 | 0       |
+|     learn_bridge_data                            |     |        | mag_2           | select    | auto_sel               | 0       |
+|     learn_bridge_is_inter                        |     |        | icmp_ln191      | setne     | auto                   | 0       |
+|     add_ln309_fu_305_p2                          |     |        | add_ln309       | add       | fabric                 | 0       |
+|  + process_post_spike_aer                        | 3   |        |                 |           |                        |         |
+|    new_trace_fu_269_p2                           |     |        | new_trace       | add       | fabric                 | 0       |
+|    select_ln333_fu_287_p3                        |     |        | select_ln333    | select    | auto_sel               | 0       |
+|    icmp_ln341_fu_305_p2                          |     |        | icmp_ln341      | seteq     | auto                   | 0       |
+|    add_ln341_fu_311_p2                           |     |        | add_ln341       | add       | fabric                 | 0       |
+|    dst_end_fu_331_p2                             |     |        | dst_end         | add       | fabric                 | 0       |
+|    icmp_ln346_fu_337_p2                          |     |        | icmp_ln346      | setgt     | auto                   | 0       |
+|    icmp_ln346_1_fu_342_p2                        |     |        | icmp_ln346_1    | setlt     | auto                   | 0       |
+|    xor_ln346_fu_347_p2                           |     |        | xor_ln346       | xor       | auto                   | 0       |
+|    or_ln346_fu_353_p2                            |     |        | or_ln346        | or        | auto                   | 0       |
+|    local_dst_fu_359_p2                           |     |        | local_dst       | sub       | fabric                 | 0       |
+|    widx_fu_371_p2                                |     |        | widx            | add       | fabric                 | 0       |
+|   + process_post_spike_aer_Pipeline_LTP_LOOP     | 3   |        |                 |           |                        |         |
+|     icmp_ln352_fu_277_p2                         |     |        | icmp_ln352      | seteq     | auto                   | 0       |
+|     add_ln352_fu_283_p2                          |     |        | add_ln352       | add       | fabric                 | 0       |
+|     pre_id_fu_293_p2                             |     |        | pre_id          | add       | fabric                 | 0       |
+|     icmp_ln363_fu_317_p2                         |     |        | icmp_ln363      | seteq     | auto                   | 0       |
+|     distance_fu_423_p2                           |     |        | distance        | sub       | fabric                 | 0       |
+|     mul_4ns_8ns_12_3_1_U88                       | 1   | yes    | mul_dt          | mul       | dsp                    | 1       |
+|     mul_12ns_16s_28_4_1_U89                      | 1   | yes    | mul_a           | mul       | dsp                    | 2       |
+|     mul_12s_16s_28_4_1_U90                       | 1   | yes    | mul_ln381       | mul       | dsp                    | 2       |
+|     w_fu_483_p2                                  |     |        | w               | add       | fabric                 | 0       |
+|     icmp_ln131_fu_499_p2                         |     |        | icmp_ln131      | setgt     | auto                   | 0       |
+|     icmp_ln132_fu_505_p2                         |     |        | icmp_ln132      | setlt     | auto                   | 0       |
+|     select_ln131_fu_515_p3                       |     |        | select_ln131    | select    | auto_sel               | 0       |
+|     or_ln131_fu_523_p2                           |     |        | or_ln131        | or        | auto                   | 0       |
+|     updated_fu_529_p3                            |     |        | updated         | select    | auto_sel               | 0       |
+|     xor_ln163_fu_327_p2                          |     |        | xor_ln163       | xor       | auto                   | 0       |
+|     and_ln163_fu_332_p2                          |     |        | and_ln163       | and       | auto                   | 0       |
+|     icmp_ln168_fu_347_p2                         |     |        | icmp_ln168      | setne     | auto                   | 0       |
+|     or_ln168_fu_353_p2                           |     |        | or_ln168        | or        | auto                   | 0       |
+|     learn_bridge_exc                             |     |        | exc             | xor       | auto                   | 0       |
+|     mag_3_fu_552_p2                              |     |        | mag_3           | sub       | fabric                 | 0       |
+|     learn_bridge_data                            |     |        | mag_4           | select    | auto_sel               | 0       |
+|     learn_bridge_is_inter                        |     |        | icmp_ln191      | setne     | auto                   | 0       |
+|     add_ln396_fu_413_p2                          |     |        | add_ln396       | add       | fabric                 | 0       |
+|  + apply_rstdp_reward                            | 3   |        |                 |           |                        |         |
+|    icmp_ln419_fu_299_p2                          |     |        | icmp_ln419      | setne     | auto                   | 0       |
+|    and_ln419_fu_305_p2                           |     |        | and_ln419       | and       | auto                   | 0       |
+|    reward_mag_fu_319_p2                          |     |        | reward_mag      | sub       | fabric                 | 0       |
+|    reward_mag_1_fu_325_p3                        |     |        | reward_mag_1    | select    | auto_sel               | 0       |
+|    icmp_ln426_fu_343_p2                          |     |        | icmp_ln426      | setne     | auto                   | 0       |
+|    icmp_ln427_fu_359_p2                          |     |        | icmp_ln427      | setne     | auto                   | 0       |
+|    icmp_ln428_fu_375_p2                          |     |        | icmp_ln428      | setne     | auto                   | 0       |
+|    shift_sel_fu_409_p6                           |     |        | select_ln428    | select    | auto_sel               | 0       |
+|    xor_ln426_fu_389_p2                           |     |        | xor_ln426       | xor       | auto                   | 0       |
+|    and_ln427_fu_395_p2                           |     |        | and_ln427       | and       | auto                   | 0       |
+|    sparsemux_7_2_2_1_1_U153                      |     |        | shift_sel       | sparsemux | onehotencoding_realdef | 0       |
+|    icmp_ln436_fu_437_p2                          |     |        | icmp_ln436      | seteq     | auto                   | 0       |
+|    add_ln436_fu_443_p2                           |     |        | add_ln436       | add       | fabric                 | 0       |
+|    icmp_ln440_fu_470_p2                          |     |        | icmp_ln440      | seteq     | auto                   | 0       |
+|    add_ln440_fu_475_p2                           |     |        | add_ln440       | add       | fabric                 | 0       |
+|    add_ln440_1_fu_503_p2                         |     |        | add_ln440_1     | add       | fabric                 | 0       |
+|    add_ln485_fu_485_p2                           |     |        | add_ln485       | add       | fabric                 | 0       |
+|    icmp_ln446_fu_508_p2                          |     |        | icmp_ln446      | seteq     | auto                   | 0       |
+|    mac_muladd_11ns_10ns_20ns_21_4_1_U154         | 1   |        | mul_ln451       | mul       | dsp_slice              | 3       |
+|    mac_muladd_11ns_10ns_20ns_21_4_1_U154         | 1   |        | add_ln451       | add       | dsp_slice              | 3       |
+|   + apply_rstdp_reward_Pipeline_RSTDP_INNER      | 2   |        |                 |           |                        |         |
+|     icmp_ln451_fu_313_p2                         |     |        | icmp_ln451      | seteq     | auto                   | 0       |
+|     add_ln451_1_fu_319_p2                        |     |        | add_ln451_1     | add       | fabric                 | 0       |
+|     post_id_fu_329_p2                            |     |        | post_id         | add       | fabric                 | 0       |
+|     icmp_ln457_fu_360_p2                         |     |        | icmp_ln457      | seteq     | auto                   | 0       |
+|     mul_8s_8s_16_3_1_U126                        | 1   | yes    | mul_elig        | mul       | dsp                    | 2       |
+|     icmp_ln465_fu_513_p2                         |     |        | icmp_ln465      | seteq     | auto                   | 0       |
+|     icmp_ln465_1_fu_518_p2                       |     |        | icmp_ln465_1    | seteq     | auto                   | 0       |
+|     icmp_ln465_2_fu_523_p2                       |     |        | icmp_ln465_2    | seteq     | auto                   | 0       |
+|     sparsemux_9_3_7_1_1_U127                     |     |        | base_scaled_4   | sparsemux | onehotencoding_realdef | 0       |
+|     mul_7s_16s_23_3_1_U128                       | 1   | yes    | mul_rs          | mul       | dsp                    | 2       |
+|     delta_fu_584_p2                              |     |        | delta           | sub       | fabric                 | 0       |
+|     delta_1_fu_590_p3                            |     |        | delta_1         | select    | auto_sel               | 0       |
+|     w_fu_601_p2                                  |     |        | w               | add       | fabric                 | 0       |
+|     icmp_ln131_fu_617_p2                         |     |        | icmp_ln131      | setgt     | auto                   | 0       |
+|     icmp_ln132_fu_623_p2                         |     |        | icmp_ln132      | setlt     | auto                   | 0       |
+|     select_ln131_fu_633_p3                       |     |        | select_ln131    | select    | auto_sel               | 0       |
+|     or_ln131_fu_641_p2                           |     |        | or_ln131        | or        | auto                   | 0       |
+|     updated_fu_647_p3                            |     |        | updated         | select    | auto_sel               | 0       |
+|     xor_ln163_fu_379_p2                          |     |        | xor_ln163       | xor       | auto                   | 0       |
+|     or_ln163_fu_385_p2                           |     |        | or_ln163        | or        | auto                   | 0       |
+|     or_ln168_fu_399_p2                           |     |        | or_ln168        | or        | auto                   | 0       |
+|     icmp_ln168_fu_404_p2                         |     |        | icmp_ln168      | seteq     | auto                   | 0       |
+|     learn_bridge_exc                             |     |        | exc             | xor       | auto                   | 0       |
+|     mag_5_fu_670_p2                              |     |        | mag_5           | sub       | fabric                 | 0       |
+|     learn_bridge_data                            |     |        | mag_6           | select    | auto_sel               | 0       |
+|     learn_bridge_is_inter                        |     |        | icmp_ln191      | setne     | auto                   | 0       |
+|     add_ln492_fu_340_p2                          |     |        | add_ln492       | add       | fabric                 | 0       |
+|  + decay_eligibility_traces                      | 0   |        |                 |           |                        |         |
+|   + decay_eligibility_traces_Pipeline_DECAY_PRE  | 0   |        |                 |           |                        |         |
+|     icmp_ln506_fu_73_p2                          |     |        | icmp_ln506      | seteq     | auto                   | 0       |
+|     add_ln506_fu_79_p2                           |     |        | add_ln506       | add       | fabric                 | 0       |
+|     sub_ln512_fu_109_p2                          |     |        | sub_ln512       | sub       | fabric                 | 0       |
+|   + decay_eligibility_traces_Pipeline_DECAY_POST | 0   |        |                 |           |                        |         |
+|     icmp_ln516_fu_73_p2                          |     |        | icmp_ln516      | seteq     | auto                   | 0       |
+|     add_ln516_fu_79_p2                           |     |        | add_ln516       | add       | fabric                 | 0       |
+|     sub_ln521_fu_109_p2                          |     |        | sub_ln521       | sub       | fabric                 | 0       |
++--------------------------------------------------+-----+--------+-----------------+-----------+------------------------+---------+
 
 
 ================================================================
 == Storage Report
 ================================================================
-+-----------------------------------+------------+-----------+------+------+--------+-------------------------------+--------+---------+------------------+
-| Name                              | Usage      | Type      | BRAM | URAM | Pragma | Variable                      | Impl   | Latency | Bitwidth, Depth, |
-|                                   |            |           |      |      |        |                               |        |         | Banks            |
-+-----------------------------------+------------+-----------+------+------+--------+-------------------------------+--------+---------+------------------+
-| + snn_top_hls                     |            |           | 287  | 0    |        |                               |        |         |                  |
-|   ctrl_s_axi_U                    | interface  | s_axilite |      |      |        |                               |        |         |                  |
-|   encoder_spikes_fifo_U           | fifo array |           | 3    |      |        | encoder_spikes                | memory | 0       | 41, 32, 1        |
-|   p_ZL15pre_eligibility_0_U       | ram_2p     |           | 1    |      | pragma | p_ZL15pre_eligibility_0       | bram   | 1       | 8, 256, 1        |
-|   p_ZL16post_eligibility_0_U      | ram_2p     |           | 1    |      | pragma | p_ZL16post_eligibility_0      | bram   | 1       | 8, 256, 1        |
-|   p_ZL15pre_eligibility_1_U       | ram_2p     |           | 1    |      | pragma | p_ZL15pre_eligibility_1       | bram   | 1       | 8, 256, 1        |
-|   p_ZL16post_eligibility_1_U      | ram_2p     |           | 1    |      | pragma | p_ZL16post_eligibility_1      | bram   | 1       | 8, 256, 1        |
-|   p_ZL15pre_eligibility_2_U       | ram_2p     |           | 1    |      | pragma | p_ZL15pre_eligibility_2       | bram   | 1       | 8, 256, 1        |
-|   p_ZL16post_eligibility_2_U      | ram_2p     |           | 1    |      | pragma | p_ZL16post_eligibility_2      | bram   | 1       | 8, 256, 1        |
-|   p_ZL15pre_eligibility_3_U       | ram_2p     |           | 1    |      | pragma | p_ZL15pre_eligibility_3       | bram   | 1       | 8, 256, 1        |
-|   p_ZL16post_eligibility_3_U      | ram_2p     |           | 1    |      | pragma | p_ZL16post_eligibility_3      | bram   | 1       | 8, 256, 1        |
-|   pre_traces_trace_0_U            | ram_2p     |           | 1    |      | pragma | pre_traces_trace_0            | bram   | 1       | 8, 256, 1        |
-|   pre_traces_last_spike_time_0_U  | ram_2p     |           | 1    |      | pragma | pre_traces_last_spike_time_0  | bram   | 1       | 16, 256, 1       |
-|   post_traces_trace_0_U           | ram_2p     |           | 1    |      | pragma | post_traces_trace_0           | bram   | 1       | 8, 256, 1        |
-|   post_traces_last_spike_time_0_U | ram_2p     |           | 1    |      | pragma | post_traces_last_spike_time_0 | bram   | 1       | 16, 256, 1       |
-|   pre_traces_trace_1_U            | ram_2p     |           | 1    |      | pragma | pre_traces_trace_1            | bram   | 1       | 8, 256, 1        |
-|   pre_traces_last_spike_time_1_U  | ram_2p     |           | 1    |      | pragma | pre_traces_last_spike_time_1  | bram   | 1       | 16, 256, 1       |
-|   post_traces_trace_1_U           | ram_2p     |           | 1    |      | pragma | post_traces_trace_1           | bram   | 1       | 8, 256, 1        |
-|   post_traces_last_spike_time_1_U | ram_2p     |           | 1    |      | pragma | post_traces_last_spike_time_1 | bram   | 1       | 16, 256, 1       |
-|   pre_traces_trace_2_U            | ram_2p     |           | 1    |      | pragma | pre_traces_trace_2            | bram   | 1       | 8, 256, 1        |
-|   pre_traces_last_spike_time_2_U  | ram_2p     |           | 1    |      | pragma | pre_traces_last_spike_time_2  | bram   | 1       | 16, 256, 1       |
-|   post_traces_trace_2_U           | ram_2p     |           | 1    |      | pragma | post_traces_trace_2           | bram   | 1       | 8, 256, 1        |
-|   post_traces_last_spike_time_2_U | ram_2p     |           | 1    |      | pragma | post_traces_last_spike_time_2 | bram   | 1       | 16, 256, 1       |
-|   pre_traces_trace_3_U            | ram_2p     |           | 1    |      | pragma | pre_traces_trace_3            | bram   | 1       | 8, 256, 1        |
-|   pre_traces_last_spike_time_3_U  | ram_2p     |           | 1    |      | pragma | pre_traces_last_spike_time_3  | bram   | 1       | 16, 256, 1       |
-|   post_traces_trace_3_U           | ram_2p     |           | 1    |      | pragma | post_traces_trace_3           | bram   | 1       | 8, 256, 1        |
-|   post_traces_last_spike_time_3_U | ram_2p     |           | 1    |      | pragma | post_traces_last_spike_time_3 | bram   | 1       | 16, 256, 1       |
-|   p_ZL17encoder_phase_acc_0_U     | ram_2p     |           | 1    |      | pragma | p_ZL17encoder_phase_acc_0     | bram   | 1       | 16, 392, 1       |
-|   p_ZL17encoder_phase_acc_1_U     | ram_2p     |           | 1    |      | pragma | p_ZL17encoder_phase_acc_1     | bram   | 1       | 16, 392, 1       |
-|   p_ZL13weight_memory_0_0_U       | ram_2p     |           | 32   |      | pragma | p_ZL13weight_memory_0_0       | bram   | 1       | 4, 131072, 1     |
-|   p_ZL13weight_memory_0_1_U       | ram_2p     |           | 32   |      | pragma | p_ZL13weight_memory_0_1       | bram   | 1       | 4, 131072, 1     |
-|   p_ZL13weight_memory_0_2_U       | ram_2p     |           | 32   |      | pragma | p_ZL13weight_memory_0_2       | bram   | 1       | 4, 131072, 1     |
-|   p_ZL13weight_memory_0_3_U       | ram_2p     |           | 32   |      | pragma | p_ZL13weight_memory_0_3       | bram   | 1       | 4, 131072, 1     |
-|   p_ZL13weight_memory_1_0_U       | ram_2p     |           | 32   |      | pragma | p_ZL13weight_memory_1_0       | bram   | 1       | 4, 131072, 1     |
-|   p_ZL13weight_memory_1_1_U       | ram_2p     |           | 32   |      | pragma | p_ZL13weight_memory_1_1       | bram   | 1       | 4, 131072, 1     |
-|   p_ZL13weight_memory_1_2_U       | ram_2p     |           | 32   |      | pragma | p_ZL13weight_memory_1_2       | bram   | 1       | 4, 131072, 1     |
-|   p_ZL13weight_memory_1_3_U       | ram_2p     |           | 32   |      | pragma | p_ZL13weight_memory_1_3       | bram   | 1       | 4, 131072, 1     |
-|   p_ZL13encoder_frame_0_U         | ram_t2p    |           | 1    |      |        | p_ZL13encoder_frame_0         | auto   | 1       | 8, 392, 1        |
-|   p_ZL13encoder_frame_1_U         | ram_t2p    |           | 1    |      |        | p_ZL13encoder_frame_1         | auto   | 1       | 8, 392, 1        |
-+-----------------------------------+------------+-----------+------+------+--------+-------------------------------+--------+---------+------------------+
++-------------------------------------+------------+-----------+------+------+--------+--------------------------------+--------+---------+------------------+
+| Name                                | Usage      | Type      | BRAM | URAM | Pragma | Variable                       | Impl   | Latency | Bitwidth, Depth, |
+|                                     |            |           |      |      |        |                                |        |         | Banks            |
++-------------------------------------+------------+-----------+------+------+--------+--------------------------------+--------+---------+------------------+
+| + snn_top_hls                       |            |           | 261  | 0    |        |                                |        |         |                  |
+|   ctrl_s_axi_U                      | interface  | s_axilite |      |      |        |                                |        |         |                  |
+|   encoder_spikes_fifo_U             | fifo array |           | 3    |      |        | encoder_spikes                 | memory | 0       | 41, 32, 1        |
+|   pre_eligibility_U                 | ram_2p     |           |      |      | pragma | pre_eligibility                | lutram | 1       | 8, 4890, 1       |
+|   post_eligibility_U                | ram_2p     |           |      |      | pragma | post_eligibility               | lutram | 1       | 8, 4890, 1       |
+|   pre_traces_U                      | ram_2p     |           |      |      | pragma | pre_traces                     | lutram | 1       | 8, 4890, 1       |
+|   post_traces_U                     | ram_2p     |           |      |      | pragma | post_traces                    | lutram | 1       | 8, 4890, 1       |
+|   p_ZL17encoder_phase_acc_0_U       | ram_2p     |           |      |      | pragma | p_ZL17encoder_phase_acc_0      | lutram | 1       | 16, 392, 1       |
+|   p_ZL17encoder_phase_acc_1_U       | ram_2p     |           |      |      | pragma | p_ZL17encoder_phase_acc_1      | lutram | 1       | 16, 392, 1       |
+|   weight_memory_U                   | ram_t2p    |           | 256  |      | pragma | weight_memory                  | bram   | 3       | 4, 843776, 1     |
+|   CONNECTION_TABLE_src_id_start_U   | rom_1p     |           |      |      |        | CONNECTION_TABLE_src_id_start  | auto   | 1       | 12, 8, 1         |
+|   CONNECTION_TABLE_dst_id_start_U   | rom_1p     |           |      |      |        | CONNECTION_TABLE_dst_id_start  | auto   | 1       | 13, 8, 1         |
+|   CONNECTION_TABLE_weight_offset_U  | rom_1p     |           |      |      |        | CONNECTION_TABLE_weight_offset | auto   | 1       | 20, 8, 1         |
+|   CONNECTION_TABLE_dst_size_U       | rom_1p     |           |      |      |        | CONNECTION_TABLE_dst_size      | auto   | 1       | 11, 8, 1         |
+|   p_ZL13encoder_frame_0_U           | ram_t2p    |           | 1    |      |        | p_ZL13encoder_frame_0          | auto   | 1       | 8, 392, 1        |
+|   p_ZL13encoder_frame_1_U           | ram_t2p    |           | 1    |      |        | p_ZL13encoder_frame_1          | auto   | 1       | 8, 392, 1        |
+|   CONNECTION_TABLE_src_size_U       | rom_1p     |           |      |      |        | CONNECTION_TABLE_src_size      | auto   | 1       | 11, 8, 1         |
+|  + process_pre_spike_aer            |            |           | 0    | 0    |        |                                |        |         |                  |
+|    CONNECTION_TABLE_src_id_start_U  | rom_1p     |           |      |      |        | CONNECTION_TABLE_src_id_start  | auto   | 1       | 12, 8, 1         |
+|    CONNECTION_TABLE_weight_offset_U | rom_1p     |           |      |      |        | CONNECTION_TABLE_weight_offset | auto   | 1       | 20, 8, 1         |
+|    CONNECTION_TABLE_dst_size_U      | rom_1p     |           |      |      |        | CONNECTION_TABLE_dst_size      | auto   | 1       | 11, 8, 1         |
+|    CONNECTION_TABLE_dst_id_start_U  | rom_1p     |           |      |      |        | CONNECTION_TABLE_dst_id_start  | auto   | 1       | 13, 8, 1         |
+|  + process_post_spike_aer           |            |           | 0    | 0    |        |                                |        |         |                  |
+|    CONNECTION_TABLE_dst_id_start_U  | rom_1p     |           |      |      |        | CONNECTION_TABLE_dst_id_start  | auto   | 1       | 13, 8, 1         |
+|    CONNECTION_TABLE_dst_size_U      | rom_1p     |           |      |      |        | CONNECTION_TABLE_dst_size      | auto   | 1       | 11, 8, 1         |
+|    CONNECTION_TABLE_weight_offset_U | rom_1p     |           |      |      |        | CONNECTION_TABLE_weight_offset | auto   | 1       | 20, 8, 1         |
+|    CONNECTION_TABLE_src_id_start_U  | rom_1p     |           |      |      |        | CONNECTION_TABLE_src_id_start  | auto   | 1       | 12, 8, 1         |
+|  + apply_rstdp_reward               |            |           | 0    | 0    |        |                                |        |         |                  |
+|    CONNECTION_TABLE_src_id_start_U  | rom_1p     |           |      |      |        | CONNECTION_TABLE_src_id_start  | auto   | 1       | 12, 8, 1         |
+|    CONNECTION_TABLE_weight_offset_U | rom_1p     |           |      |      |        | CONNECTION_TABLE_weight_offset | auto   | 1       | 20, 8, 1         |
+|    CONNECTION_TABLE_dst_size_U      | rom_1p     |           |      |      |        | CONNECTION_TABLE_dst_size      | auto   | 1       | 11, 8, 1         |
+|    CONNECTION_TABLE_dst_id_start_U  | rom_1p     |           |      |      |        | CONNECTION_TABLE_dst_id_start  | auto   | 1       | 13, 8, 1         |
++-------------------------------------+------------+-----------+------+------+--------+--------------------------------+--------+---------+------------------+
 
 
 ================================================================
 == Pragma Report
 ================================================================
 * Inferred Pragmas
-+-----------------+---------------------------------------------------+----------------------------------------------------------------------------------------------+----------------------------------+
-| Type            | Options                                           | Location                                                                                     | Inferred From                    |
-+-----------------+---------------------------------------------------+----------------------------------------------------------------------------------------------+----------------------------------+
-| ARRAY_PARTITION | dim=1 type=complete variable=EXP_DECAY_LUT        | variable EXP_DECAY_LUT in snn_top_hls (src/snn_top_hls.cpp:130)                              | pipeline src/snn_top_hls.cpp:213 |
-| LOOP_FLATTEN    |                                                   | loop INIT_WEIGHT_OUTER (src/snn_top_hls.cpp:587:32) in snn_top_hls (src/snn_top_hls.cpp:587) | pipeline src/snn_top_hls.cpp:589 |
-| ARRAY_PARTITION | dim=1 type=cyclic factor=2 variable=encoder_frame | variable encoder_frame in snn_top_hls (src/snn_top_hls.cpp:33)                               | pipeline src/snn_top_hls.cpp:629 |
-+-----------------+---------------------------------------------------+----------------------------------------------------------------------------------------------+----------------------------------+
++-----------------+---------------------------------------------------+----------------------------------------------------------------+----------------------------------+
+| Type            | Options                                           | Location                                                       | Inferred From                    |
++-----------------+---------------------------------------------------+----------------------------------------------------------------+----------------------------------+
+| ARRAY_PARTITION | dim=1 type=cyclic factor=2 variable=encoder_frame | variable encoder_frame in snn_top_hls (src/snn_top_hls.cpp:33) | pipeline src/snn_top_hls.cpp:859 |
++-----------------+---------------------------------------------------+----------------------------------------------------------------+----------------------------------+
 
 * Valid Pragma Syntax
-+-----------------+--------------------------------------------------+---------------------------------------------------------------+
-| Type            | Options                                          | Location                                                      |
-+-----------------+--------------------------------------------------+---------------------------------------------------------------+
-| INLINE          |                                                  | in encoder_write_axis_spike (src/snn_top_hls.cpp:43)          |
-| INLINE          |                                                  | in encoder_delta_sigma (src/snn_top_hls.cpp:66)               |
-| INLINE          | off                                              | in run_encoder_once (src/snn_top_hls.cpp:90)                  |
-| PIPELINE        | ii=1                                             | in run_encoder_once (src/snn_top_hls.cpp:94)                  |
-| INLINE          |                                                  | in compute_decayed_trace (src/snn_top_hls.cpp:158)            |
-| INLINE          |                                                  | in clip_weight (src/snn_top_hls.cpp:179)                      |
-| INLINE          | off                                              | in process_pre_spike_aer (src/snn_top_hls.cpp:198)            |
-| PIPELINE        | ii=1                                             | in process_pre_spike_aer (src/snn_top_hls.cpp:213)            |
-| UNROLL          | factor=4                                         | in process_pre_spike_aer (src/snn_top_hls.cpp:214)            |
-| INLINE          | off                                              | in process_post_spike_aer (src/snn_top_hls.cpp:249)           |
-| PIPELINE        | ii=1                                             | in process_post_spike_aer (src/snn_top_hls.cpp:264)           |
-| UNROLL          | factor=2                                         | in process_post_spike_aer (src/snn_top_hls.cpp:265)           |
-| INLINE          | off                                              | in apply_rstdp_reward (src/snn_top_hls.cpp:301)               |
-| LOOP_FLATTEN    | off                                              | in apply_rstdp_reward (src/snn_top_hls.cpp:319)               |
-| PIPELINE        | ii=1                                             | in apply_rstdp_reward (src/snn_top_hls.cpp:325)               |
-| UNROLL          | factor=4                                         | in apply_rstdp_reward (src/snn_top_hls.cpp:326)               |
-| INLINE          | off                                              | in decay_eligibility_traces (src/snn_top_hls.cpp:358)         |
-| PIPELINE        | ii=1                                             | in decay_eligibility_traces (src/snn_top_hls.cpp:362)         |
-| UNROLL          | factor=4                                         | in decay_eligibility_traces (src/snn_top_hls.cpp:363)         |
-| PIPELINE        | ii=1                                             | in decay_eligibility_traces (src/snn_top_hls.cpp:372)         |
-| UNROLL          | factor=4                                         | in decay_eligibility_traces (src/snn_top_hls.cpp:373)         |
-| INLINE          |                                                  | in update_eligibility_on_pre_spike (src/snn_top_hls.cpp:385)  |
-| INLINE          |                                                  | in update_eligibility_on_post_spike (src/snn_top_hls.cpp:392) |
-| INTERFACE       | s_axilite port=ctrl_reg bundle=ctrl              | in snn_top_hls (src/snn_top_hls.cpp:458)                      |
-| INTERFACE       | s_axilite port=config_reg bundle=ctrl            | in snn_top_hls (src/snn_top_hls.cpp:459)                      |
-| INTERFACE       | s_axilite port=mode_reg bundle=ctrl              | in snn_top_hls (src/snn_top_hls.cpp:460)                      |
-| INTERFACE       | s_axilite port=time_steps_reg bundle=ctrl        | in snn_top_hls (src/snn_top_hls.cpp:461)                      |
-| INTERFACE       | s_axilite port=learning_params bundle=ctrl       | in snn_top_hls (src/snn_top_hls.cpp:462)                      |
-| INTERFACE       | s_axilite port=encoder_config bundle=ctrl        | in snn_top_hls (src/snn_top_hls.cpp:463)                      |
-| INTERFACE       | s_axilite port=status_reg bundle=ctrl            | in snn_top_hls (src/snn_top_hls.cpp:464)                      |
-| INTERFACE       | s_axilite port=spike_count_reg bundle=ctrl       | in snn_top_hls (src/snn_top_hls.cpp:465)                      |
-| INTERFACE       | s_axilite port=weight_sum_reg bundle=ctrl        | in snn_top_hls (src/snn_top_hls.cpp:466)                      |
-| INTERFACE       | s_axilite port=version_reg bundle=ctrl           | in snn_top_hls (src/snn_top_hls.cpp:467)                      |
-| INTERFACE       | s_axilite port=reward_signal bundle=ctrl         | in snn_top_hls (src/snn_top_hls.cpp:468)                      |
-| INTERFACE       | s_axilite port=return bundle=ctrl                | in snn_top_hls (src/snn_top_hls.cpp:469)                      |
-| INTERFACE       | axis port=s_axis_spikes                          | in snn_top_hls (src/snn_top_hls.cpp:472)                      |
-| INTERFACE       | axis port=s_axis_data                            | in snn_top_hls (src/snn_top_hls.cpp:473)                      |
-| INTERFACE       | axis port=s_axis_weights                         | in snn_top_hls (src/snn_top_hls.cpp:474)                      |
-| INTERFACE       | axis port=m_axis_spikes                          | in snn_top_hls (src/snn_top_hls.cpp:475)                      |
-| INTERFACE       | axis port=m_axis_weights                         | in snn_top_hls (src/snn_top_hls.cpp:476)                      |
-| INTERFACE       | ap_none port=spike_in_valid                      | in snn_top_hls (src/snn_top_hls.cpp:479)                      |
-| INTERFACE       | ap_none port=spike_in_neuron_id                  | in snn_top_hls (src/snn_top_hls.cpp:480)                      |
-| INTERFACE       | ap_none port=spike_in_weight                     | in snn_top_hls (src/snn_top_hls.cpp:481)                      |
-| INTERFACE       | ap_none port=spike_in_ready                      | in snn_top_hls (src/snn_top_hls.cpp:482)                      |
-| INTERFACE       | ap_none port=spike_out_valid                     | in snn_top_hls (src/snn_top_hls.cpp:483)                      |
-| INTERFACE       | ap_none port=spike_out_neuron_id                 | in snn_top_hls (src/snn_top_hls.cpp:484)                      |
-| INTERFACE       | ap_none port=spike_out_weight                    | in snn_top_hls (src/snn_top_hls.cpp:485)                      |
-| INTERFACE       | ap_none port=spike_out_ready                     | in snn_top_hls (src/snn_top_hls.cpp:486)                      |
-| INTERFACE       | ap_none port=snn_enable                          | in snn_top_hls (src/snn_top_hls.cpp:487)                      |
-| INTERFACE       | ap_none port=snn_reset                           | in snn_top_hls (src/snn_top_hls.cpp:488)                      |
-| INTERFACE       | ap_none port=threshold_out                       | in snn_top_hls (src/snn_top_hls.cpp:489)                      |
-| INTERFACE       | ap_none port=leak_rate_out                       | in snn_top_hls (src/snn_top_hls.cpp:490)                      |
-| INTERFACE       | ap_none port=snn_ready                           | in snn_top_hls (src/snn_top_hls.cpp:491)                      |
-| INTERFACE       | ap_none port=snn_busy                            | in snn_top_hls (src/snn_top_hls.cpp:492)                      |
-| BIND_STORAGE    | variable=weight_memory type=RAM_2P impl=BRAM     | in snn_top_hls (src/snn_top_hls.cpp:499)                      |
-| ARRAY_PARTITION | variable=weight_memory cyclic factor=2 dim=1     | in snn_top_hls (src/snn_top_hls.cpp:500)                      |
-| ARRAY_PARTITION | variable=weight_memory cyclic factor=4 dim=2     | in snn_top_hls (src/snn_top_hls.cpp:501)                      |
-| BIND_STORAGE    | variable=pre_eligibility type=RAM_2P impl=BRAM   | in snn_top_hls (src/snn_top_hls.cpp:504)                      |
-| ARRAY_PARTITION | variable=pre_eligibility cyclic factor=4         | in snn_top_hls (src/snn_top_hls.cpp:505)                      |
-| BIND_STORAGE    | variable=post_eligibility type=RAM_2P impl=BRAM  | in snn_top_hls (src/snn_top_hls.cpp:506)                      |
-| ARRAY_PARTITION | variable=post_eligibility cyclic factor=4        | in snn_top_hls (src/snn_top_hls.cpp:507)                      |
-| BIND_STORAGE    | variable=pre_traces type=RAM_2P impl=BRAM        | in snn_top_hls (src/snn_top_hls.cpp:510)                      |
-| ARRAY_PARTITION | variable=pre_traces cyclic factor=4              | in snn_top_hls (src/snn_top_hls.cpp:511)                      |
-| BIND_STORAGE    | variable=post_traces type=RAM_2P impl=BRAM       | in snn_top_hls (src/snn_top_hls.cpp:512)                      |
-| ARRAY_PARTITION | variable=post_traces cyclic factor=4             | in snn_top_hls (src/snn_top_hls.cpp:513)                      |
-| BIND_STORAGE    | variable=encoder_phase_acc type=RAM_2P impl=BRAM | in snn_top_hls (src/snn_top_hls.cpp:516)                      |
-| ARRAY_PARTITION | variable=encoder_phase_acc cyclic factor=2       | in snn_top_hls (src/snn_top_hls.cpp:517)                      |
-| PIPELINE        | ii=1                                             | in snn_top_hls (src/snn_top_hls.cpp:566)                      |
-| PIPELINE        | ii=1                                             | in snn_top_hls (src/snn_top_hls.cpp:573)                      |
-| PIPELINE        | ii=1                                             | in snn_top_hls (src/snn_top_hls.cpp:581)                      |
-| PIPELINE        | ii=1                                             | in snn_top_hls (src/snn_top_hls.cpp:589)                      |
-| PIPELINE        | ii=1                                             | in snn_top_hls (src/snn_top_hls.cpp:629)                      |
-| STREAM          | variable=encoder_spikes depth=32                 | in snn_top_hls (src/snn_top_hls.cpp:649)                      |
-| LOOP_FLATTEN    | off                                              | in snn_top_hls (src/snn_top_hls.cpp:655)                      |
-| PIPELINE        | ii=1                                             | in snn_top_hls (src/snn_top_hls.cpp:790)                      |
-| INLINE          |                                                  | in write_weight (src/snn_top_hls.cpp:806)                     |
-| INLINE          |                                                  | in read_weight (src/snn_top_hls.cpp:814)                      |
-| INLINE          | off                                              | in load_weights_from_stream (src/snn_top_hls.cpp:825)         |
-| PIPELINE        | ii=1                                             | in load_weights_from_stream (src/snn_top_hls.cpp:828)         |
-+-----------------+--------------------------------------------------+---------------------------------------------------------------+
++-----------------+---------------------------------------------------------+---------------------------------------------------------------+
+| Type            | Options                                                 | Location                                                      |
++-----------------+---------------------------------------------------------+---------------------------------------------------------------+
+| INLINE          |                                                         | in find_neuron_group (include/snn_top_hls.h:368)              |
+| UNROLL          |                                                         | in find_neuron_group (include/snn_top_hls.h:370)              |
+| INLINE          |                                                         | in find_connection (include/snn_top_hls.h:381)                |
+| UNROLL          |                                                         | in find_connection (include/snn_top_hls.h:383)                |
+| INLINE          |                                                         | in weight_index (include/snn_top_hls.h:395)                   |
+| INLINE          |                                                         | in encoder_write_axis_spike (src/snn_top_hls.cpp:43)          |
+| INLINE          |                                                         | in encoder_delta_sigma (src/snn_top_hls.cpp:66)               |
+| INLINE          |                                                         | in run_encoder_once (src/snn_top_hls.cpp:90)                  |
+| PIPELINE        | ii=1                                                    | in run_encoder_once (src/snn_top_hls.cpp:94)                  |
+| INLINE          |                                                         | in clip_weight (src/snn_top_hls.cpp:130)                      |
+| INLINE          |                                                         | in enqueue_learn_weight_update (src/snn_top_hls.cpp:161)      |
+| INLINE          | off                                                     | in decay_all_traces (src/snn_top_hls.cpp:204)                 |
+| PIPELINE        | ii=1                                                    | in decay_all_traces (src/snn_top_hls.cpp:210)                 |
+| LOOP_TRIPCOUNT  | min=4890 max=4890                                       | in decay_all_traces (src/snn_top_hls.cpp:211)                 |
+| BIND_OP         | variable=mul_decay_pre op=mul impl=dsp latency=2        | in decay_all_traces (src/snn_top_hls.cpp:214)                 |
+| PIPELINE        | ii=1                                                    | in decay_all_traces (src/snn_top_hls.cpp:218)                 |
+| LOOP_TRIPCOUNT  | min=4890 max=4890                                       | in decay_all_traces (src/snn_top_hls.cpp:219)                 |
+| BIND_OP         | variable=mul_decay_post op=mul impl=dsp latency=2       | in decay_all_traces (src/snn_top_hls.cpp:222)                 |
+| INLINE          | off                                                     | in process_pre_spike_aer (src/snn_top_hls.cpp:242)            |
+| LOOP_FLATTEN    | off                                                     | in process_pre_spike_aer (src/snn_top_hls.cpp:255)            |
+| PIPELINE        | ii=1                                                    | in process_pre_spike_aer (src/snn_top_hls.cpp:266)            |
+| LOOP_TRIPCOUNT  | min=10 max=4096                                         | in process_pre_spike_aer (src/snn_top_hls.cpp:267)            |
+| BIND_OP         | variable=mul_dt op=mul impl=dsp latency=2               | in process_pre_spike_aer (src/snn_top_hls.cpp:286)            |
+| BIND_OP         | variable=mul_a op=mul impl=dsp latency=3                | in process_pre_spike_aer (src/snn_top_hls.cpp:290)            |
+| BIND_OP         | variable=mul_lr op=mul impl=dsp latency=3               | in process_pre_spike_aer (src/snn_top_hls.cpp:295)            |
+| INLINE          | off                                                     | in process_post_spike_aer (src/snn_top_hls.cpp:329)           |
+| LOOP_FLATTEN    | off                                                     | in process_post_spike_aer (src/snn_top_hls.cpp:342)           |
+| PIPELINE        | ii=1                                                    | in process_post_spike_aer (src/snn_top_hls.cpp:353)           |
+| LOOP_TRIPCOUNT  | min=10 max=4096                                         | in process_post_spike_aer (src/snn_top_hls.cpp:354)           |
+| BIND_OP         | variable=mul_dt op=mul impl=dsp latency=2               | in process_post_spike_aer (src/snn_top_hls.cpp:373)           |
+| BIND_OP         | variable=mul_a op=mul impl=dsp latency=3                | in process_post_spike_aer (src/snn_top_hls.cpp:377)           |
+| BIND_OP         | variable=mul_lr op=mul impl=dsp latency=3               | in process_post_spike_aer (src/snn_top_hls.cpp:382)           |
+| INLINE          | off                                                     | in apply_rstdp_reward (src/snn_top_hls.cpp:417)               |
+| LOOP_FLATTEN    | off                                                     | in apply_rstdp_reward (src/snn_top_hls.cpp:437)               |
+| LOOP_FLATTEN    | off                                                     | in apply_rstdp_reward (src/snn_top_hls.cpp:441)               |
+| LOOP_TRIPCOUNT  | min=10 max=4096                                         | in apply_rstdp_reward (src/snn_top_hls.cpp:442)               |
+| PIPELINE        | ii=1                                                    | in apply_rstdp_reward (src/snn_top_hls.cpp:452)               |
+| LOOP_TRIPCOUNT  | min=10 max=4096                                         | in apply_rstdp_reward (src/snn_top_hls.cpp:453)               |
+| BIND_OP         | variable=mul_elig op=mul impl=dsp latency=2             | in apply_rstdp_reward (src/snn_top_hls.cpp:460)               |
+| BIND_OP         | variable=mul_rs op=mul impl=dsp latency=2               | in apply_rstdp_reward (src/snn_top_hls.cpp:474)               |
+| INLINE          | off                                                     | in decay_eligibility_traces (src/snn_top_hls.cpp:503)         |
+| PIPELINE        | ii=1                                                    | in decay_eligibility_traces (src/snn_top_hls.cpp:507)         |
+| LOOP_TRIPCOUNT  | min=4890 max=4890                                       | in decay_eligibility_traces (src/snn_top_hls.cpp:508)         |
+| PIPELINE        | ii=1                                                    | in decay_eligibility_traces (src/snn_top_hls.cpp:517)         |
+| LOOP_TRIPCOUNT  | min=4890 max=4890                                       | in decay_eligibility_traces (src/snn_top_hls.cpp:518)         |
+| INLINE          |                                                         | in update_eligibility_on_pre_spike (src/snn_top_hls.cpp:530)  |
+| INLINE          |                                                         | in update_eligibility_on_post_spike (src/snn_top_hls.cpp:537) |
+| INTERFACE       | s_axilite port=ctrl_reg bundle=ctrl                     | in snn_top_hls (src/snn_top_hls.cpp:615)                      |
+| INTERFACE       | s_axilite port=config_reg bundle=ctrl                   | in snn_top_hls (src/snn_top_hls.cpp:616)                      |
+| INTERFACE       | s_axilite port=mode_reg bundle=ctrl                     | in snn_top_hls (src/snn_top_hls.cpp:617)                      |
+| INTERFACE       | s_axilite port=time_steps_reg bundle=ctrl               | in snn_top_hls (src/snn_top_hls.cpp:618)                      |
+| INTERFACE       | s_axilite port=learning_params bundle=ctrl              | in snn_top_hls (src/snn_top_hls.cpp:619)                      |
+| INTERFACE       | s_axilite port=encoder_config bundle=ctrl               | in snn_top_hls (src/snn_top_hls.cpp:620)                      |
+| INTERFACE       | s_axilite port=status_reg bundle=ctrl                   | in snn_top_hls (src/snn_top_hls.cpp:621)                      |
+| INTERFACE       | s_axilite port=spike_count_reg bundle=ctrl              | in snn_top_hls (src/snn_top_hls.cpp:622)                      |
+| INTERFACE       | s_axilite port=weight_sum_reg bundle=ctrl               | in snn_top_hls (src/snn_top_hls.cpp:623)                      |
+| INTERFACE       | s_axilite port=version_reg bundle=ctrl                  | in snn_top_hls (src/snn_top_hls.cpp:624)                      |
+| INTERFACE       | s_axilite port=reward_signal bundle=ctrl                | in snn_top_hls (src/snn_top_hls.cpp:625)                      |
+| INTERFACE       | s_axilite port=return bundle=ctrl                       | in snn_top_hls (src/snn_top_hls.cpp:626)                      |
+| INTERFACE       | axis port=s_axis_spikes                                 | in snn_top_hls (src/snn_top_hls.cpp:629)                      |
+| INTERFACE       | axis port=s_axis_data                                   | in snn_top_hls (src/snn_top_hls.cpp:630)                      |
+| INTERFACE       | axis port=s_axis_weights                                | in snn_top_hls (src/snn_top_hls.cpp:631)                      |
+| INTERFACE       | axis port=m_axis_spikes                                 | in snn_top_hls (src/snn_top_hls.cpp:632)                      |
+| INTERFACE       | axis port=m_axis_weights                                | in snn_top_hls (src/snn_top_hls.cpp:633)                      |
+| INTERFACE       | ap_none port=spike_in_valid                             | in snn_top_hls (src/snn_top_hls.cpp:636)                      |
+| INTERFACE       | ap_none port=spike_in_neuron_id                         | in snn_top_hls (src/snn_top_hls.cpp:637)                      |
+| INTERFACE       | ap_none port=spike_in_weight                            | in snn_top_hls (src/snn_top_hls.cpp:638)                      |
+| INTERFACE       | ap_none port=spike_in_ready                             | in snn_top_hls (src/snn_top_hls.cpp:639)                      |
+| INTERFACE       | ap_none port=spike_out_valid                            | in snn_top_hls (src/snn_top_hls.cpp:640)                      |
+| INTERFACE       | ap_none port=spike_out_neuron_id                        | in snn_top_hls (src/snn_top_hls.cpp:641)                      |
+| INTERFACE       | ap_none port=spike_out_weight                           | in snn_top_hls (src/snn_top_hls.cpp:642)                      |
+| INTERFACE       | ap_none port=spike_out_ready                            | in snn_top_hls (src/snn_top_hls.cpp:643)                      |
+| INTERFACE       | ap_none port=learn_weight_valid                         | in snn_top_hls (src/snn_top_hls.cpp:644)                      |
+| INTERFACE       | ap_none port=learn_weight_group                         | in snn_top_hls (src/snn_top_hls.cpp:645)                      |
+| INTERFACE       | ap_none port=learn_weight_src                           | in snn_top_hls (src/snn_top_hls.cpp:646)                      |
+| INTERFACE       | ap_none port=learn_weight_dst                           | in snn_top_hls (src/snn_top_hls.cpp:647)                      |
+| INTERFACE       | ap_none port=learn_weight_data                          | in snn_top_hls (src/snn_top_hls.cpp:648)                      |
+| INTERFACE       | ap_none port=learn_weight_exc                           | in snn_top_hls (src/snn_top_hls.cpp:649)                      |
+| INTERFACE       | ap_none port=learn_weight_is_inter                      | in snn_top_hls (src/snn_top_hls.cpp:650)                      |
+| INTERFACE       | ap_none port=learn_weight_dst_group                     | in snn_top_hls (src/snn_top_hls.cpp:651)                      |
+| INTERFACE       | ap_none port=learn_weight_fanout_idx                    | in snn_top_hls (src/snn_top_hls.cpp:652)                      |
+| INTERFACE       | ap_none port=learn_weight_ready                         | in snn_top_hls (src/snn_top_hls.cpp:653)                      |
+| INTERFACE       | ap_none port=snn_enable                                 | in snn_top_hls (src/snn_top_hls.cpp:654)                      |
+| INTERFACE       | ap_none port=snn_reset                                  | in snn_top_hls (src/snn_top_hls.cpp:655)                      |
+| INTERFACE       | ap_none port=threshold_out                              | in snn_top_hls (src/snn_top_hls.cpp:656)                      |
+| INTERFACE       | ap_none port=leak_rate_out                              | in snn_top_hls (src/snn_top_hls.cpp:657)                      |
+| INTERFACE       | ap_none port=snn_ready                                  | in snn_top_hls (src/snn_top_hls.cpp:658)                      |
+| INTERFACE       | ap_none port=snn_busy                                   | in snn_top_hls (src/snn_top_hls.cpp:659)                      |
+| BIND_STORAGE    | variable=weight_memory type=RAM_T2P impl=BRAM latency=3 | in snn_top_hls (src/snn_top_hls.cpp:671)                      |
+| BIND_STORAGE    | variable=pre_eligibility type=RAM_2P impl=LUTRAM        | in snn_top_hls (src/snn_top_hls.cpp:676)                      |
+| BIND_STORAGE    | variable=post_eligibility type=RAM_2P impl=LUTRAM       | in snn_top_hls (src/snn_top_hls.cpp:677)                      |
+| BIND_STORAGE    | variable=pre_traces type=RAM_2P impl=LUTRAM             | in snn_top_hls (src/snn_top_hls.cpp:686)                      |
+| BIND_STORAGE    | variable=post_traces type=RAM_2P impl=LUTRAM            | in snn_top_hls (src/snn_top_hls.cpp:687)                      |
+| BIND_STORAGE    | variable=encoder_phase_acc type=RAM_2P impl=LUTRAM      | in snn_top_hls (src/snn_top_hls.cpp:695)                      |
+| ARRAY_PARTITION | variable=encoder_phase_acc cyclic factor=2              | in snn_top_hls (src/snn_top_hls.cpp:696)                      |
+| PIPELINE        | ii=1                                                    | in snn_top_hls (src/snn_top_hls.cpp:783)                      |
+| LOOP_TRIPCOUNT  | min=4890 max=4890                                       | in snn_top_hls (src/snn_top_hls.cpp:784)                      |
+| PIPELINE        | ii=1                                                    | in snn_top_hls (src/snn_top_hls.cpp:791)                      |
+| LOOP_TRIPCOUNT  | min=4890 max=4890                                       | in snn_top_hls (src/snn_top_hls.cpp:792)                      |
+| PIPELINE        | ii=1                                                    | in snn_top_hls (src/snn_top_hls.cpp:798)                      |
+| PIPELINE        | ii=1                                                    | in snn_top_hls (src/snn_top_hls.cpp:805)                      |
+| LOOP_TRIPCOUNT  | min=843776 max=843776                                   | in snn_top_hls (src/snn_top_hls.cpp:806)                      |
+| PIPELINE        | ii=1                                                    | in snn_top_hls (src/snn_top_hls.cpp:859)                      |
+| STREAM          | variable=encoder_spikes depth=32                        | in snn_top_hls (src/snn_top_hls.cpp:879)                      |
+| LOOP_FLATTEN    | off                                                     | in snn_top_hls (src/snn_top_hls.cpp:885)                      |
+| PIPELINE        | ii=1                                                    | in snn_top_hls (src/snn_top_hls.cpp:1136)                     |
+| INLINE          |                                                         | in write_weight (src/snn_top_hls.cpp:1154)                    |
+| INLINE          |                                                         | in read_weight (src/snn_top_hls.cpp:1165)                     |
+| INLINE          | off                                                     | in load_weights_from_stream (src/snn_top_hls.cpp:1181)        |
+| PIPELINE        | ii=1                                                    | in load_weights_from_stream (src/snn_top_hls.cpp:1184)        |
++-----------------+---------------------------------------------------------+---------------------------------------------------------------+
 
 

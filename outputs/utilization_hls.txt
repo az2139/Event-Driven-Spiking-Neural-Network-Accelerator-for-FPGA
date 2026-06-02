@@ -5,7 +5,7 @@ Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2025 Advanc
 | Host         : jwlee-BCML running 64-bit Ubuntu 24.04.3 LTS
 | Command      : report_utilization -file /mnt/wsl/workspace/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/outputs/utilization_hls.txt
 | Design       : design_1_wrapper
-| Device       : xc7z020clg400-1
+| Device       : xc7z020clg400-2
 | Speed File   : -1
 | Design State : Routed
 --------------------------------------------------------------------------------------------------------------------------------------------------

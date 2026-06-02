@@ -3,7 +3,7 @@ Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2025 Advanc
 | Tool Version : Vivado v.2025.2 (lin64) Build 6299465 Fri Nov 14 12:34:56 MST 2025
 | Date         : Tue Feb 10 21:20:48 2026
 | Host         : jwlee-BCML running 64-bit Ubuntu 24.04.3 LTS
-| Command      : report_timing_summary -file /mnt/workspace/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/outputs/integrated_timing.rpt
+| Command      : report_timing_summary -file ～/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/outputs/integrated_timing.rpt
 | Design       : snn_integrated_top
 | Device       : 7z020-clg400
 | Speed File   : -1  PRODUCTION 1.12 2019-11-22

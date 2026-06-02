@@ -4,7 +4,8 @@
 # Usage: nohup bash tests/launch_experiment.sh > logs/launch.txt 2>&1 &
 
 set -e
-REPO="/mnt/workspace/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO"
 mkdir -p logs
 

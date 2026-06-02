@@ -191,6 +191,6 @@ hls:
 # FPGA Target
 # ─────────────────────────────────────────────────────────────────────────────
 target:
-  fpga_part: "xc7z020clg400-1"
+  fpga_part: "xc7z020clg400-2"
   clock_period_ns: 10       # 100 MHz
   board: "tul.com.tw:pynq-z2:part0:1.0"

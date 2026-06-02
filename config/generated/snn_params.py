@@ -89,6 +89,6 @@ AUXILIARY_LUTRAM         = 1
 PACKED_BUFFER_BYTES     = 421888
 
 # ─── FPGA Target ──────────────────────────────────────────────────
-FPGA_PART           = "xc7z020clg400-1"
+FPGA_PART           = "xc7z020clg400-2"
 CLOCK_PERIOD_NS     = 10
 BOARD               = "tul.com.tw:pynq-z2:part0:1.0"

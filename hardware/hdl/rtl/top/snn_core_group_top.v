@@ -59,7 +59,7 @@
 //     [8:5]   = group_id   (4-bit, supports up to 16 groups)
 //     [4:0]   = reserved
 //
-// Resource Budget (xc7z020clg400-1):
+// Resource Budget (xc7z020clg400-2):
 //   - 16 Core Groups:      ~48 BRAM36, ~9,120 LUT
 //   - Connectivity Table:  ~16 BRAM36 (32K×17b)
 //   - Event Router:        ~300 LUT

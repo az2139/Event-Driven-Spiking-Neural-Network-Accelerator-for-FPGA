@@ -1,14 +1,14 @@
 Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.
-----------------------------------------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------
 | Tool Version : Vivado v.2025.2 (lin64) Build 6299465 Fri Nov 14 12:34:56 MST 2025
-| Date         : Tue Feb 10 23:10:06 2026
-| Host         : jwlee-BCML running 64-bit Ubuntu 24.04.3 LTS
-| Command      : report_utilization -file /mnt/workspace/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/outputs/event_router_ng_utilization.rpt
+| Date         : Tue Jun  2 14:29:45 2026
+| Host         : ym-ThinkSystem-ST558-7Y16CTO1WW running 64-bit Ubuntu 24.04.4 LTS
+| Command      : report_utilization -file /home/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/outputs/event_router_ng_utilization.rpt
 | Design       : event_router_ng
-| Device       : xc7z020clg400-1
-| Speed File   : -1
+| Device       : xc7z020clg400-2
+| Speed File   : -2
 | Design State : Synthesized
-----------------------------------------------------------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Utilization Design Information
 
@@ -31,11 +31,11 @@ Table of Contents
 +-------------------------+------+-------+------------+-----------+-------+
 |        Site Type        | Used | Fixed | Prohibited | Available | Util% |
 +-------------------------+------+-------+------------+-----------+-------+
-| Slice LUTs*             |  862 |     0 |          0 |     53200 |  1.62 |
-|   LUT as Logic          |  862 |     0 |          0 |     53200 |  1.62 |
+| Slice LUTs*             |  921 |     0 |          0 |     53200 |  1.73 |
+|   LUT as Logic          |  921 |     0 |          0 |     53200 |  1.73 |
 |   LUT as Memory         |    0 |     0 |          0 |     17400 |  0.00 |
-| Slice Registers         |  382 |     0 |          0 |    106400 |  0.36 |
-|   Register as Flip Flop |  382 |     0 |          0 |    106400 |  0.36 |
+| Slice Registers         |  455 |     0 |          0 |    106400 |  0.43 |
+|   Register as Flip Flop |  455 |     0 |          0 |    106400 |  0.43 |
 |   Register as Latch     |    0 |     0 |          0 |    106400 |  0.00 |
 | F7 Muxes                |    4 |     0 |          0 |     26600 |  0.02 |
 | F8 Muxes                |    2 |     0 |          0 |     13300 |  0.02 |
@@ -62,7 +62,7 @@ Warning! For any ECO changes, please run place_design if there are unplaced inst
 | 0     |          Yes |           - |          Set |
 | 0     |          Yes |           - |        Reset |
 | 0     |          Yes |         Set |            - |
-| 382   |          Yes |       Reset |            - |
+| 455   |          Yes |       Reset |            - |
 +-------+--------------+-------------+--------------+
 
 
@@ -151,16 +151,16 @@ Warning! For any ECO changes, please run place_design if there are unplaced inst
 +----------+------+---------------------+
 | Ref Name | Used | Functional Category |
 +----------+------+---------------------+
-| LUT6     |  511 |                 LUT |
-| FDRE     |  382 |        Flop & Latch |
-| LUT5     |  312 |                 LUT |
-| LUT3     |  144 |                 LUT |
-| LUT4     |   51 |                 LUT |
-| LUT2     |   13 |                 LUT |
+| LUT6     |  656 |                 LUT |
+| FDRE     |  455 |        Flop & Latch |
+| LUT5     |  262 |                 LUT |
+| LUT3     |   80 |                 LUT |
+| LUT4     |   55 |                 LUT |
+| LUT2     |   10 |                 LUT |
 | CARRY4   |    8 |          CarryLogic |
-| LUT1     |    5 |                 LUT |
 | MUXF7    |    4 |               MuxFx |
 | MUXF8    |    2 |               MuxFx |
+| LUT1     |    2 |                 LUT |
 +----------+------+---------------------+
 
 

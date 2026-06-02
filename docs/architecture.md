@@ -38,7 +38,7 @@ System architecture of the Event-Driven SNN FPGA Accelerator.
 - Dense intra-group + sparse inter-group connectivity
 - Fixed-point arithmetic (8-bit weights)
 
-**Hardware**: Xilinx Zynq-7020 (xc7z020clg400-1) on PYNQ-Z2
+**Hardware**: Xilinx Zynq-7020 (xc7z020clg400-2) on PYNQ-Z2
 
 **Core Group Configuration** (16 groups × 128 neurons):
 
@@ -468,7 +468,7 @@ global_id[6:0]  = local_neuron_id (0-127)
 
 ## Build Details
 
-**Target Device**: xc7z020clg400-1
+**Target Device**: xc7z020clg400-2
 **Clock**: 100 MHz
 **Neuron Count**: 2,048 (16 groups × 128)
 

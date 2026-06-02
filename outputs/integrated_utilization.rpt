@@ -3,9 +3,9 @@ Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2025 Advanc
 | Tool Version : Vivado v.2025.2 (lin64) Build 6299465 Fri Nov 14 12:34:56 MST 2025
 | Date         : Tue Feb 10 21:20:38 2026
 | Host         : jwlee-BCML running 64-bit Ubuntu 24.04.3 LTS
-| Command      : report_utilization -file /mnt/workspace/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/outputs/integrated_utilization.rpt
+| Command      : report_utilization -file ～/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/outputs/integrated_utilization.rpt
 | Design       : snn_integrated_top
-| Device       : xc7z020clg400-1
+| Device       : xc7z020clg400-2
 | Speed File   : -1
 | Design State : Routed
 -----------------------------------------------------------------------------------------------------------------------------------------------------

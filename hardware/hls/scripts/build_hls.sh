@@ -20,7 +20,7 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 # Default configuration
-PART="xc7z020clg400-1"
+PART="xc7z020clg400-2"
 CLOCK="10ns"
 TOP_FUNCTION="snn_top_hls"
 SRC_FILE="src/snn_top_hls.cpp"
@@ -63,7 +63,7 @@ while [[ $# -gt 0 ]]; do
             echo "Options:"
             echo "  --clean        Clean previous build before starting"
             echo "  --verbose, -v  Verbose output"
-            echo "  --part PART    Target FPGA part (default: xc7z020clg400-1)"
+            echo "  --part PART    Target FPGA part (default: xc7z020clg400-2)"
             echo "  --clock PERIOD Clock period (default: 10ns)"
             echo "  --top NAME     Top function name (default: snn_top_hls)"
             echo "  --help, -h     Show this message"

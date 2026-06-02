@@ -75,7 +75,14 @@ export LC_ALL=en_US.UTF-8
 vivado -mode batch -source synth_core_group.tcl
 ```
 
-Output: `outputs/snn_integrated.bit`
+Output: utilization reports in `outputs/` such as:
+
+- `core_group_utilization.rpt`
+- `connectivity_table_utilization.rpt`
+- `event_router_ng_utilization.rpt`
+- `connectivity_table_16g_utilization.rpt`
+
+For a full bitstream, run `hardware/scripts/rebuild_integrated.tcl`, which performs synthesis, implementation, and `write_bitstream`.
 
 ## Supported Workflow Policy
 

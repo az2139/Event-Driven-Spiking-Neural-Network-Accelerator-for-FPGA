@@ -156,7 +156,12 @@ module tb_core_group;
         $display("\n--- Test 2: Weight Load ---");
         load_weight(7'd0, 7'd1, 8'd15, 1'b1);
         repeat(5) @(posedge clk);
-        check(2, "Weight loaded without error", 1);
+        // White-box verification: read back weight_mem entry written by load_weight
+        if (u_dut.weight_mem[1][WEIGHT_WIDTH-1:0] == 15 &&
+            u_dut.weight_mem[1][WEIGHT_WIDTH] == 1'b1)
+            check(2, "Weight loaded without error", 1);
+        else
+            check(2, "Weight loaded without error", 0);
 
         // TEST 3: Sub-threshold (w=5 < threshold=10)
         $display("\n--- Test 3: Sub-threshold ---");

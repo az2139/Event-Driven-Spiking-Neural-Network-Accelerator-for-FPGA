@@ -13,7 +13,7 @@ Use the `v++` compiler instead.
 
 # Or directly with v++:
 v++ -c --mode hls \
-    --part xc7z020clg400-1 \
+    --part xc7z020clg400-2 \
     --work_dir ./hls_output \
     --hls.clock 10ns \
     --hls.syn.top snn_top_hls \
@@ -37,7 +37,7 @@ v++ -c --mode hls \
 Options:
 - `--clean` - Remove previous build
 - `--clock 8ns` - Set clock period
-- `--part xc7z020clg400-1` - Target FPGA
+- `--part xc7z020clg400-2` - Target FPGA
 - `--verbose` - Show detailed output
 
 ### Output

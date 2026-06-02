@@ -6,7 +6,8 @@ set -e
 
 source /xilinx/2025.2/Vivado/settings64.sh
 
-PROJ_ROOT="/mnt/workspace/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJ_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 DCP="$PROJ_ROOT/hardware/build/snn_integrated_v2/snn_integrated_v2.runs/impl_1/snn_integrated_top_routed.dcp"
 VCD="$PROJ_ROOT/hardware/sim_work_power/power_sweep.saif"
 XPA_TCL="$PROJ_ROOT/hardware/scripts/run_xpa.tcl"

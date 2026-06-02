@@ -1,14 +1,14 @@
 Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.
------------------------------------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------------------------------------------
 | Tool Version : Vivado v.2025.2 (lin64) Build 6299465 Fri Nov 14 12:34:56 MST 2025
-| Date         : Tue Feb 10 23:09:01 2026
-| Host         : jwlee-BCML running 64-bit Ubuntu 24.04.3 LTS
-| Command      : report_utilization -file /mnt/workspace/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/outputs/core_group_utilization.rpt
+| Date         : Tue Jun  2 14:28:53 2026
+| Host         : ym-ThinkSystem-ST558-7Y16CTO1WW running 64-bit Ubuntu 24.04.4 LTS
+| Command      : report_utilization -file /home/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/outputs/core_group_utilization.rpt
 | Design       : core_group
-| Device       : xc7z020clg400-1
-| Speed File   : -1
+| Device       : xc7z020clg400-2
+| Speed File   : -2
 | Design State : Synthesized
------------------------------------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Utilization Design Information
 
@@ -31,13 +31,13 @@ Table of Contents
 +----------------------------+------+-------+------------+-----------+-------+
 |          Site Type         | Used | Fixed | Prohibited | Available | Util% |
 +----------------------------+------+-------+------------+-----------+-------+
-| Slice LUTs*                |  557 |     0 |          0 |     53200 |  1.05 |
-|   LUT as Logic             |  541 |     0 |          0 |     53200 |  1.02 |
-|   LUT as Memory            |   16 |     0 |          0 |     17400 |  0.09 |
-|     LUT as Distributed RAM |   16 |     0 |            |           |       |
+| Slice LUTs*                |  572 |     0 |          0 |     53200 |  1.08 |
+|   LUT as Logic             |  550 |     0 |          0 |     53200 |  1.03 |
+|   LUT as Memory            |   22 |     0 |          0 |     17400 |  0.13 |
+|     LUT as Distributed RAM |   22 |     0 |            |           |       |
 |     LUT as Shift Register  |    0 |     0 |            |           |       |
-| Slice Registers            |  317 |     0 |          0 |    106400 |  0.30 |
-|   Register as Flip Flop    |  317 |     0 |          0 |    106400 |  0.30 |
+| Slice Registers            |  325 |     0 |          0 |    106400 |  0.31 |
+|   Register as Flip Flop    |  325 |     0 |          0 |    106400 |  0.31 |
 |   Register as Latch        |    0 |     0 |          0 |    106400 |  0.00 |
 | F7 Muxes                   |   32 |     0 |          0 |     26600 |  0.12 |
 | F8 Muxes                   |    8 |     0 |          0 |     13300 |  0.06 |
@@ -64,7 +64,7 @@ Warning! For any ECO changes, please run place_design if there are unplaced inst
 | 0     |          Yes |           - |          Set |
 | 0     |          Yes |           - |        Reset |
 | 8     |          Yes |         Set |            - |
-| 309   |          Yes |       Reset |            - |
+| 317   |          Yes |       Reset |            - |
 +-------+--------------+-------------+--------------+
 
 
@@ -74,9 +74,9 @@ Warning! For any ECO changes, please run place_design if there are unplaced inst
 +-------------------+------+-------+------------+-----------+-------+
 |     Site Type     | Used | Fixed | Prohibited | Available | Util% |
 +-------------------+------+-------+------------+-----------+-------+
-| Block RAM Tile    |    3 |     0 |          0 |       140 |  2.14 |
-|   RAMB36/FIFO*    |    2 |     0 |          0 |       140 |  1.43 |
-|     RAMB36E1 only |    2 |       |            |           |       |
+| Block RAM Tile    |    5 |     0 |          0 |       140 |  3.57 |
+|   RAMB36/FIFO*    |    4 |     0 |          0 |       140 |  2.86 |
+|     RAMB36E1 only |    4 |       |            |           |       |
 |   RAMB18          |    2 |     0 |          0 |       280 |  0.71 |
 |     RAMB18E1 only |    2 |       |            |           |       |
 +-------------------+------+-------+------------+-----------+-------+
@@ -155,19 +155,19 @@ Warning! For any ECO changes, please run place_design if there are unplaced inst
 +----------+------+---------------------+
 | Ref Name | Used | Functional Category |
 +----------+------+---------------------+
-| FDRE     |  309 |        Flop & Latch |
-| LUT6     |  241 |                 LUT |
-| LUT4     |  170 |                 LUT |
-| LUT2     |   76 |                 LUT |
-| LUT5     |   49 |                 LUT |
-| LUT3     |   49 |                 LUT |
+| FDRE     |  317 |        Flop & Latch |
+| LUT6     |  258 |                 LUT |
+| LUT4     |  175 |                 LUT |
+| LUT2     |   80 |                 LUT |
+| LUT5     |   50 |                 LUT |
+| LUT3     |   36 |                 LUT |
 | CARRY4   |   36 |          CarryLogic |
 | MUXF7    |   32 |               MuxFx |
-| LUT1     |   20 |                 LUT |
-| RAMD64E  |   16 |  Distributed Memory |
+| RAMD64E  |   22 |  Distributed Memory |
+| LUT1     |   16 |                 LUT |
 | MUXF8    |    8 |               MuxFx |
 | FDSE     |    8 |        Flop & Latch |
-| RAMB36E1 |    2 |        Block Memory |
+| RAMB36E1 |    4 |        Block Memory |
 | RAMB18E1 |    2 |        Block Memory |
 +----------+------+---------------------+
 

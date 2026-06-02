@@ -1,14 +1,14 @@
 Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.
------------------------------------------------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 | Tool Version : Vivado v.2025.2 (lin64) Build 6299465 Fri Nov 14 12:34:56 MST 2025
-| Date         : Tue Feb 10 23:10:33 2026
-| Host         : jwlee-BCML running 64-bit Ubuntu 24.04.3 LTS
-| Command      : report_utilization -file /mnt/workspace/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/outputs/connectivity_table_16g_utilization.rpt
+| Date         : Tue Jun  2 14:30:05 2026
+| Host         : ym-ThinkSystem-ST558-7Y16CTO1WW running 64-bit Ubuntu 24.04.4 LTS
+| Command      : report_utilization -file /home/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/outputs/connectivity_table_16g_utilization.rpt
 | Design       : synaptic_connectivity_table
-| Device       : xc7z020clg400-1
-| Speed File   : -1
+| Device       : xc7z020clg400-2
+| Speed File   : -2
 | Design State : Synthesized
------------------------------------------------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Utilization Design Information
 
@@ -72,9 +72,9 @@ Warning! For any ECO changes, please run place_design if there are unplaced inst
 +-------------------+------+-------+------------+-----------+-------+
 |     Site Type     | Used | Fixed | Prohibited | Available | Util% |
 +-------------------+------+-------+------------+-----------+-------+
-| Block RAM Tile    |   17 |     0 |          0 |       140 | 12.14 |
-|   RAMB36/FIFO*    |   17 |     0 |          0 |       140 | 12.14 |
-|     RAMB36E1 only |   17 |       |            |           |       |
+| Block RAM Tile    |   21 |     0 |          0 |       140 | 15.00 |
+|   RAMB36/FIFO*    |   21 |     0 |          0 |       140 | 15.00 |
+|     RAMB36E1 only |   21 |       |            |           |       |
 |   RAMB18          |    0 |     0 |          0 |       280 |  0.00 |
 +-------------------+------+-------+------------+-----------+-------+
 * Note: Each Block RAM Tile only has one FIFO logic available and therefore can accommodate only one FIFO36E1 or one FIFO18E1. However, if a FIFO18E1 occupies a Block RAM Tile, that tile can still accommodate a RAMB18E1
@@ -152,7 +152,7 @@ Warning! For any ECO changes, please run place_design if there are unplaced inst
 +----------+------+---------------------+
 | Ref Name | Used | Functional Category |
 +----------+------+---------------------+
-| RAMB36E1 |   17 |        Block Memory |
+| RAMB36E1 |   21 |        Block Memory |
 | LUT2     |    3 |                 LUT |
 | FDRE     |    2 |        Flop & Latch |
 | LUT1     |    1 |                 LUT |

@@ -5,12 +5,13 @@
 # Usage: vivado -mode batch -source hardware/scripts/rebuild_integrated.tcl
 #-----------------------------------------------------------------------------
 
-set project_dir "/mnt/workspace/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA"
+set script_dir [file dirname [file normalize [info script]]]
+set project_dir [file normalize [file join $script_dir ../..]]
 set build_dir   "${project_dir}/hardware/build/snn_integrated_v2"
 set rtl_dir     "${project_dir}/hardware/hdl/rtl"
 set ip_repo     "${project_dir}/hardware/ip_repo"
 set output_dir  "${project_dir}/outputs"
-set part        "xc7z020clg400-1"
+set part        "xc7z020clg400-2"
 # Integrated default clock for generated bitstream.
 # Override with SNN_PL_CLK_MHZ when sweeping lower/higher operating points.
 set pl_clk_mhz 100

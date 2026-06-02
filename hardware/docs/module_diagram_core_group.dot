@@ -1,0 +1,87 @@
+digraph SNN {
+  rankdir=LR;
+  labelloc="t";
+  label="SNN Module Relationship (expanded core_group internals)";
+  fontsize=12;
+
+  node [shape=rect, style=filled, fillcolor="#f8f8f8", color="#333333"];
+
+  subgraph cluster_PS {
+    label="PS / Host";
+    style=rounded;
+    color="#c6dbef";
+    BD [label="Block Design\ndesign_1_wrapper", fillcolor="#e6f2fb"];
+    Config [label="AXI-Lite\nsnn_config_regs", fillcolor="#e6f2fb"];
+  }
+
+  subgraph cluster_PL {
+    label="FPGA PL";
+    style=rounded;
+    color="#d7f5d7";
+
+    HLS [label="HLS: snn_top_hls (learning/encoding)", fillcolor="#eaffea"];
+    TOP [label="Top: snn_core_group_top / snn_integrated_top", fillcolor="#f0fff0"];
+
+    subgraph cluster_router {
+      label="Event Router & CT";
+      style=rounded;
+      ER [label="event_router_ng", fillcolor="#fff2cc"];
+      CT [label="synaptic_connectivity_table", fillcolor="#fff2cc"];
+    }
+
+    subgraph cluster_core_groups {
+      label="Core Groups";
+      style=rounded;
+      CGS [label="core_group × NUM_GROUPS", fillcolor="#fff0f6"];
+    }
+
+    TOP -> ER [label="wires: grp_* ports", color="#666666"];
+    ER -> CT [label="lookup (fanout_idx)", color="#666666"];
+    ER -> CGS [label="grp_in_valid / grp_in_*", color="#666666"];
+    HLS -> TOP [label="learn/stream / cfg", color="#666666"];
+    BD -> HLS [label="AXI-Stream / DDR", color="#666666"];
+    BD -> TOP [label="cfg / clocks / reset", color="#666666"];
+  }
+
+  /* Expanded core_group internals cluster */
+  subgraph cluster_core_group_expanded {
+    label="core_group (expanded)";
+    style=rounded;
+    color="#f6e7ff";
+
+    ext_spike [label="ext_spike_valid / dest_id / weight / exc", shape=oval, fillcolor="#fff"];
+    spike_fifo [label="Spike FIFO\n(width: LOCAL_ID + W + exc)\ndepth: SPIKE_BUFFER_DEPTH", shape=folder, fillcolor="#fff8e1"];
+    FSM [label="Processing FSM\nStates:\nST_IDLE → ST_LEAK_RD → ST_LEAK_CMP → ST_LEAK_WR\nST_SPIKE_RD → ST_SPIKE_CMP → ST_SPIKE_WR → ST_INTRA_READ → ST_INTRA_ROUTE", shape=component, fillcolor="#ffffff"];
+
+    neuron_state [label="Neuron State BRAM\n(neuron_state_mem)\n[state: membrane(16b) | refrac(8b)]", shape=tab, fillcolor="#eaf6ff"];
+    weight_mem [label="Local Weight BRAM\n(weight_mem)\n[addr = src*NG + dst]", shape=tab, fillcolor="#ffecec"];
+    spike_flag [label="Spike Flag Bitmap\n(spike_flag_mem)\n(used by output scan)", shape=note, fillcolor="#fff7ec"];
+    out_scan [label="Output Scan\n(bitmap → out_spike_valid / id)", shape=oval, fillcolor="#fff"];
+
+    wm_read [label="WM read addr / wm_dout (1-cycle)", shape=box, fillcolor="#fff"];
+
+    /* FIFO and FSM flows */
+    ext_spike -> spike_fifo [label="push when ext_spike_valid & ready"];
+    spike_fifo -> FSM [label="pop → ST_SPIKE_RD path", color="#444444"];
+    FSM -> neuron_state [label="ns_rd_addr (read) / ns_we + ns_din (write)", color="#444444"];
+    FSM -> weight_mem [label="wm_rd_addr on fire / scan row", color="#aa4444"];
+    weight_mem -> wm_read [label="wm_dout", color="#aa4444"];
+    wm_read -> FSM [label="wm_weight / wm_exc → ST_INTRA_ROUTE", color="#aa4444"];
+    FSM -> spike_fifo [label="push recurrent spikes (wm non-zero)", color="#aa4444"];
+    FSM -> spike_flag [label="sf_set_pending on fire", color="#4444aa"];
+    spike_flag -> out_scan [label="scan_byte / bit → out_spike_valid", color="#4444aa"];
+    out_scan -> ER [label="out_spike_valid → event router (inter-group)", color="#666666"];
+
+    /* Leak cycle */
+    FSM -> neuron_state [label="leak read/write cycle (iterates over neurons)", style=dashed];
+
+    /* Internal control signals */
+    FSM -> spike_fifo [label="fifo_push/fifo_pop control signals", style=dotted];
+
+  }
+
+  /* External connections */
+  ER -> ext_spike [label="external input → group port", color="#666666"];
+  ER -> out_scan [label="collect group outputs", color="#666666"];
+
+}
