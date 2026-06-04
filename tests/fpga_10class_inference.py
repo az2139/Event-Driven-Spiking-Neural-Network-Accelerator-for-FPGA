@@ -27,6 +27,8 @@ Author: Jiwoon Lee
 Date:   2026-02-21
 """
 
+from __future__ import annotations
+
 import argparse
 import json
 import mmap
