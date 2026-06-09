@@ -30,6 +30,7 @@ Date:   2026-02-21
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import mmap
 import os
@@ -40,7 +41,6 @@ import time
 import traceback
 
 import numpy as np
-
 # =====================================================================
 # Register Map  (snn_integrated v2 block design)
 # =====================================================================
@@ -73,6 +73,25 @@ CFG_STATUS          = 0x20
 CFG_THROUGHPUT      = 0x24   # PL-only latency cycles (first input accept -> first output spike)
 CFG_VERSION         = 0x28
 CFG_SERVICE_CYCLES  = 0x2C   # PL-only service cycles (first input accept -> return to idle)
+CFG_PROFILE_CTRL    = 0x30
+CFG_PROFILE_INDEX   = 0x34
+CFG_PROFILE_DATA    = 0x38
+CFG_PROFILE_INFO    = 0x3C
+
+PROFILE_START       = 0x01
+PROFILE_STOP        = 0x02
+STATUS_ROUTER_BUSY  = 1 << 1
+STATUS_GROUP_BUSY   = 1 << 2
+STATUS_SNN_READY    = 1 << 3
+STATUS_PROFILE_ACTIVE = 1 << 4
+STATUS_PROFILE_DONE = 1 << 5
+
+PROFILE_ROUTER_NAMES = [
+    'input_spike_count', 'output_spike_count', 'ct_lookup_count',
+    'ct_valid_entry_count', 'ct_invalid_entry_count', 'router_busy_cycles',
+    'router_idle_cycles', 'router_stall_cycles', 'cross_group_event_count',
+    'same_group_event_count', 'total_latency_cycles',
+]
 
 # AXI DMA
 DMA_MM2S_DMACR      = 0x00
@@ -135,27 +154,43 @@ class MMIO:
 
     def __init__(self, base: int, length: int = 0x1000):
         self._base   = base
+        self.physical_address = int(base)
+        self._length = int(length)
+        self._closed = False
         self._off    = base % self._PAGE
         mbase        = base - self._off
         mlen         = ((length + self._off + self._PAGE - 1) // self._PAGE) * self._PAGE
         self._fd     = os.open('/dev/mem', os.O_RDWR | os.O_SYNC)
         self._mm     = mmap.mmap(self._fd, mlen, offset=mbase)
 
+    def _check_bounds(self, offset: int, size: int) -> None:
+        if self._closed:
+            raise RuntimeError(f"MMIO 0x{self._base:08X} is already closed")
+        if offset < 0 or size < 0 or offset + size > self._length:
+            raise ValueError(
+                f"MMIO access out of range: base=0x{self._base:08X} "
+                f"offset=0x{offset:X} size={size} length={self._length}"
+            )
+
     def read(self, offset: int) -> int:
+        self._check_bounds(offset, 4)
         self._mm.seek(self._off + offset)
         return struct.unpack('<I', self._mm.read(4))[0]
 
     def write(self, offset: int, value: int) -> None:
+        self._check_bounds(offset, 4)
         self._mm.seek(self._off + offset)
         self._mm.write(struct.pack('<I', value & 0xFFFF_FFFF))
 
     def write_bytes(self, offset: int, data: bytes) -> None:
         """Bulk write raw bytes at offset (for DMA buffer population)."""
+        self._check_bounds(offset, len(data))
         self._mm.seek(self._off + offset)
         self._mm.write(data)
 
     def read_bytes(self, offset: int, length: int) -> bytes:
         """Bulk read raw bytes at offset (cache-coherent via O_SYNC mmap)."""
+        self._check_bounds(offset, length)
         self._mm.seek(self._off + offset)
         return self._mm.read(length)
 
@@ -165,8 +200,75 @@ class MMIO:
         pass
 
     def close(self) -> None:
+        self._closed = True
         self._mm.close()
         os.close(self._fd)
+
+
+class PynqDMABuffer:
+    """Contiguous, non-cacheable DMA buffer allocated through PYNQ.
+
+    Fixed /dev/mem DDR addresses work only if the region is reserved from Linux.
+    For long runs, using Linux-managed DDR as an AXI-DMA target can corrupt the
+    Python process or kernel memory.  PYNQ allocate() gives us a physical address
+    that the DMA can safely use.
+    """
+
+    def __init__(self, length: int):
+        
+
+        self._length = int(length)
+        self._closed = False
+        self._words = (self._length + 3) // 4
+        self._buf = allocate(shape=(self._words,), dtype=np.uint32, cacheable=False)
+        self._u8 = self._buf.view(np.uint8)
+        self.physical_address = int(self._buf.physical_address)
+
+    def _check_bounds(self, offset: int, size: int) -> None:
+        if self._closed:
+            raise RuntimeError("DMA buffer is already closed")
+        if offset < 0 or size < 0 or offset + size > self._length:
+            raise ValueError(
+                f"DMA buffer access out of range: phys=0x{self.physical_address:08X} "
+                f"offset=0x{offset:X} size={size} length={self._length}"
+            )
+
+    def write_bytes(self, offset: int, data: bytes) -> None:
+        self._check_bounds(offset, len(data))
+        self._u8[offset:offset + len(data)] = np.frombuffer(data, dtype=np.uint8)
+        if hasattr(self._buf, "flush"):
+            self._buf.flush()
+
+    def read_bytes(self, offset: int, length: int) -> bytes:
+        self._check_bounds(offset, length)
+        if hasattr(self._buf, "invalidate"):
+            self._buf.invalidate()
+        return bytes(self._u8[offset:offset + length])
+
+    def flush(self) -> None:
+        if hasattr(self._buf, "flush"):
+            self._buf.flush()
+
+    def close(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
+        if hasattr(self._buf, "freebuffer"):
+            self._buf.freebuffer()
+        elif hasattr(self._buf, "close"):
+            self._buf.close()
+
+
+def make_dma_buffer(fixed_base: int, length: int, label: str = "DMA"):
+    """Prefer a PYNQ-owned DMA buffer, falling back to the legacy fixed DDR map."""
+    try:
+        buf = PynqDMABuffer(length)
+        print(f"  {label} buffer: PYNQ allocate phys=0x{buf.physical_address:08X} bytes={length}")
+        return buf
+    except Exception as exc:
+        print(f"  {label} buffer: WARNING falling back to fixed /dev/mem "
+              f"0x{fixed_base:08X} bytes={length} ({exc})")
+        return MMIO(fixed_base, length)
 
 
 # =====================================================================
@@ -400,6 +502,32 @@ def router_readback(cfg: MMIO, addr: int) -> int:
     return cfg.read(CFG_CONFIG_RDATA)
 
 
+def read_profile_snapshot(cfg: MMIO, num_groups: int) -> dict:
+    """Read the latched per-sample profile snapshot through the indirect window."""
+    result = {}
+    for index, name in enumerate(PROFILE_ROUTER_NAMES):
+        cfg.write(CFG_PROFILE_INDEX, index)
+        result[name] = int(cfg.read(CFG_PROFILE_DATA))
+
+    core_base = 11 + 2 * num_groups
+    core_names = [
+        'intra_route_start_count',
+        'intra_weight_lookup_count',
+        'intra_weight_nonzero_count',
+        'intra_fifo_push_count',
+        'intra_fifo_blocked_event_count',
+    ]
+    for group in range(num_groups):
+        cfg.write(CFG_PROFILE_INDEX, 11 + group)
+        result[f'group_{group}_in_event_count'] = int(cfg.read(CFG_PROFILE_DATA))
+        cfg.write(CFG_PROFILE_INDEX, 11 + num_groups + group)
+        result[f'group_{group}_stall_cycles'] = int(cfg.read(CFG_PROFILE_DATA))
+        for metric, name in enumerate(core_names):
+            cfg.write(CFG_PROFILE_INDEX, core_base + group * len(core_names) + metric)
+            result[f'group_{group}_{name}'] = int(cfg.read(CFG_PROFILE_DATA))
+    return result
+
+
 def verify_router_for_inference(cfg: MMIO, n_neurons: int,
                                 source_offset: int = SOURCE_OFFSET) -> tuple:
     """
@@ -522,7 +650,7 @@ def build_spike_words(image: np.ndarray,
 
 
 # =====================================================================
-# HLS Warmup (resolves first-invocation weight-memory init delay ~42 ms)
+# HLS Warmup
 # =====================================================================
 
 def warmup_hls(hls: MMIO,
@@ -530,11 +658,11 @@ def warmup_hls(hls: MMIO,
                poll_sleep_s: float = 0.005,
                post_sleep_s: float = 0.010) -> None:
     """
-    Run HLS once (no DMA) to force the one-time weight-memory initialisation.
-    The HLS static `initialized` flag fires on first ever invocation, running
-    MAX_NEURONS^2 = 4.2 M zero-fill iterations (~42 ms at 100 MHz).  Without
-    warmup the first image's inference window overlaps this init and many
-    input spikes are dropped while snn_enable=0.
+    Run HLS once without DMA before the first sample.
+
+    This remains useful for both the legacy learning HLS and the lightweight
+    inference/profile HLS. The lightweight variant has no weight-memory
+    initialization, so the call is only a control-path readiness check.
     """
     hls.write(HLS_CTRL_REG, CTRL_ENABLE)
     hls.write(HLS_AP_CTRL, 0x01)   # ap_start (no auto_restart)
@@ -575,7 +703,12 @@ def run_inference(hls: MMIO, cfg: MMIO, dma: MMIO,
                   poll_sleep_first_s: float = 0.0005,
                   zero_retry_sleep_s: float = 0.00002,
                   settle_poll_sleep_s: float = 0.0002,
-                  settle_stable_cycles_req: int = 5) -> dict:
+                  settle_stable_cycles_req: int = 5,
+                  profile_enabled: bool = False,
+                  profile_num_groups: int = 0,
+                  profile_drain_timeout_s: float = 0.100,
+                  wait_hls_input_count: bool = False,
+                  hls_input_timeout_s: float = 0.300) -> dict:
     """
     Inject spike_words via MM2S DMA and collect output from S2MM.
 
@@ -594,8 +727,11 @@ def run_inference(hls: MMIO, cfg: MMIO, dma: MMIO,
     nbytes   = n_words * 4
     hls_spike_id_mask = (1 << hls_spike_pkt_id_w) - 1
     hls_spike_wgt_shift = hls_spike_pkt_id_w
+    dma_buf_in_addr = int(getattr(buf_in, "physical_address", DMA_BUF_IN))
+    dma_buf_out_addr = int(getattr(buf_out, "physical_address", DMA_BUF_OUT))
     t_total0 = time.perf_counter()
     sleep_s_total = 0.0
+    hls_spike_base = int(hls.read(HLS_SPIKE_COUNT))
 
     def mm2s_is_done(sr: int) -> bool:
         # MM2S completion is reliably indicated by IDLE=1 (bit1).
@@ -635,8 +771,11 @@ def run_inference(hls: MMIO, cfg: MMIO, dma: MMIO,
     hls.write(HLS_TIME_STEPS, time_steps_hw)
     hls.write(HLS_CONFIG_REG, hw_threshold & 0xFFFF)
 
+    if profile_enabled:
+        cfg.write(CFG_PROFILE_CTRL, PROFILE_START | ((n_words & 0xFFFF) << 16))
+
     # ── STEP 2: Arm first S2MM (4 bytes = 1 spike word, TLAST per spike)
-    dest_ptr = DMA_BUF_OUT
+    dest_ptr = dma_buf_out_addr
     max_output_spikes = (n_neurons + 16) if capture_all_spikes else 1
 
     def arm_s2mm(dest):
@@ -657,7 +796,7 @@ def run_inference(hls: MMIO, cfg: MMIO, dma: MMIO,
 
     # ── STEP 3: Start MM2S first ──────────────────────────────────────
     dma.write(DMA_MM2S_DMACR, 0x01)
-    dma.write(DMA_MM2S_SA,     DMA_BUF_IN)
+    dma.write(DMA_MM2S_SA,     dma_buf_in_addr)
     dma.write(DMA_MM2S_LENGTH, nbytes)
 
     # ── STEP 4: Start HLS after MM2S is armed ─────────────────────────
@@ -719,7 +858,7 @@ def run_inference(hls: MMIO, cfg: MMIO, dma: MMIO,
         # Read captured spike word from DDR via mmap (cache-coherent)
         # os.pread reads cached data; MMIO.read_bytes uses the O_SYNC mmap
         # which creates an uncached mapping on Zynq → sees DMA-written data.
-        raw4 = buf_out.read_bytes(next_dest - DMA_BUF_OUT, 4)
+        raw4 = buf_out.read_bytes(next_dest - dma_buf_out_addr, 4)
         w    = struct.unpack('<I', raw4)[0]
 
         # Re-read once to absorb rare read-after-write visibility lag.
@@ -727,7 +866,7 @@ def run_inference(hls: MMIO, cfg: MMIO, dma: MMIO,
         # (neuron_id=0, weight=0), so do not discard it unconditionally.
         if w == 0:
             tracked_sleep(zero_retry_sleep_s)
-            raw4_retry = buf_out.read_bytes(next_dest - DMA_BUF_OUT, 4)
+            raw4_retry = buf_out.read_bytes(next_dest - dma_buf_out_addr, 4)
             w_retry = struct.unpack('<I', raw4_retry)[0]
             if w_retry != 0:
                 w = w_retry
@@ -745,7 +884,7 @@ def run_inference(hls: MMIO, cfg: MMIO, dma: MMIO,
         this_timeout = further_spike_timeout
 
         next_dest += 4
-        if next_dest - DMA_BUF_OUT >= max_output_spikes * 4:
+        if next_dest - dma_buf_out_addr >= max_output_spikes * 4:
             break
         arm_s2mm(next_dest)   # re-arm immediately for next spike
     t_stream1 = time.perf_counter()
@@ -761,6 +900,20 @@ def run_inference(hls: MMIO, cfg: MMIO, dma: MMIO,
                 mm2s_done = True
                 break
     t_mm2s_tail1 = time.perf_counter()
+
+    # MM2S IDLE only proves the DMA has pushed words into the AXIS path.
+    # The HLS bridge may still be draining that stream into the RTL router.
+    t_hls_input0 = time.perf_counter()
+    hls_input_done = not wait_hls_input_count
+    hls_spike_target = hls_spike_base + n_words
+    if wait_hls_input_count:
+        hls_input_deadline = time.monotonic() + max(0.0, hls_input_timeout_s)
+        while time.monotonic() < hls_input_deadline:
+            if int(hls.read(HLS_SPIKE_COUNT)) >= hls_spike_target:
+                hls_input_done = True
+                break
+            tracked_sleep(settle_poll_sleep_s)
+    t_hls_input1 = time.perf_counter()
 
     # Give router/neuron pipeline time to drain after MM2S completion.
     # Without this settle window, a few tail spikes can be dropped when HLS is
@@ -786,10 +939,32 @@ def run_inference(hls: MMIO, cfg: MMIO, dma: MMIO,
                 last_neuron = cur_neuron
     t_settle1 = time.perf_counter()
 
+    # A profile snapshot is valid only after all input and RTL work has drained.
+    profile_incomplete = False
+    profile_status = 0
+    profile_snapshot = {}
+    if profile_enabled:
+        drain_deadline = time.monotonic() + max(0.0, profile_drain_timeout_s)
+        while time.monotonic() < drain_deadline:
+            mm2s_done = mm2s_done or mm2s_is_done(dma.read(DMA_MM2S_DMASR))
+            profile_status = cfg.read(CFG_STATUS)
+            router_idle = not bool(profile_status & STATUS_ROUTER_BUSY)
+            groups_idle = not bool(profile_status & STATUS_GROUP_BUSY)
+            snn_ready = bool(profile_status & STATUS_SNN_READY)
+            if mm2s_done and hls_input_done and router_idle and groups_idle and snn_ready:
+                break
+            tracked_sleep(settle_poll_sleep_s)
+        else:
+            profile_incomplete = True
+
+        cfg.write(CFG_PROFILE_CTRL, PROFILE_STOP)
+        profile_snapshot = read_profile_snapshot(cfg, profile_num_groups)
+
     # ── STEP 7: Stop HLS + DMA ────────────────────────────────────────
     t_stop0 = time.perf_counter()
-    hls.write(HLS_AP_CTRL, 0x00)
     hls.write(HLS_CTRL_REG, 0x00)
+    tracked_sleep(settle_poll_sleep_s)
+    hls.write(HLS_AP_CTRL, 0x00)
     dma.write(DMA_S2MM_DMACR, 0x00)
     tracked_sleep(stop_sleep_s)
     t_stop1 = time.perf_counter()
@@ -829,12 +1004,18 @@ def run_inference(hls: MMIO, cfg: MMIO, dma: MMIO,
         's2mm_err':       bool((s2mm_sr_end if s2mm_sr_end != 0 else s2mm_sr) & 0x0050),
         'mm2s_sr':        int(mm2s_sr_end),
         'mm2s_done':      mm2s_done,
+        'hls_input_done': bool(hls_input_done),
+        'hls_spike_target': int(hls_spike_target),
         'capture_all_spikes': bool(capture_all_spikes),
+        'profile_incomplete': bool(profile_incomplete),
+        'profile_status': int(profile_status),
+        'profile': profile_snapshot,
         'timing': {
             'run_total_ms': (t_total1 - t_total0) * 1000.0,
             'dma_reset_ms': (t_dma_reset1 - t_dma_reset0) * 1000.0,
             'stream_poll_ms': (t_stream1 - t_stream0) * 1000.0,
             'mm2s_tail_wait_ms': (t_mm2s_tail1 - t_mm2s_tail0) * 1000.0,
+            'hls_input_wait_ms': (t_hls_input1 - t_hls_input0) * 1000.0,
             'settle_wait_ms': (t_settle1 - t_settle0) * 1000.0,
             'stop_wait_ms': (t_stop1 - t_stop0) * 1000.0,
             'counter_read_ms': (t_readback1 - t_readback0) * 1000.0,
@@ -1035,6 +1216,8 @@ def parse_args():
                    help='Skip FPGA programming (bitstream already loaded)')
     p.add_argument('--output',     default=None,
                    help='JSON result file path')
+    p.add_argument('--profile-output', default=None,
+                   help='Write per-sample hardware profile snapshots to CSV')
     p.add_argument('--source-offset', type=int, default=-1,
                    help='Override router source offset (default: auto from .hwh)')
     p.add_argument('--packet-id-width', type=int, default=HLS_SPIKE_PKT_ID_W,
@@ -1089,6 +1272,7 @@ def main():
     BIT_PATH     = args.bitstream or os.path.join(DATA_DIR, 'snn_integrated_v2.bit')
     DEPLOY_PATH  = args.weights   or os.path.join(DATA_DIR, 'mnist_10class_deployment.npz')
     RESULT_PATH  = args.output    or os.path.join(DATA_DIR, 'mnist_10class_results.json')
+    PROFILE_PATH = args.profile_output
 
     SEP = '=' * 72
     print(SEP)
@@ -1160,6 +1344,15 @@ def main():
     ver = cfg.read(CFG_VERSION)
     print(f"  snn_config_regs version: 0x{ver:08X}  "
           f"({'OK' if ver == 0x534E4E01 else 'UNEXPECTED'})")
+    profile_enabled = PROFILE_PATH is not None
+    profile_num_groups = 0
+    if profile_enabled:
+        profile_info = cfg.read(CFG_PROFILE_INFO)
+        if profile_info == 0xDEADBEEF or ((profile_info >> 24) & 0xFF) != 1:
+            print("ERROR: --profile-output requested, but this bitstream has no profile window.")
+            sys.exit(1)
+        profile_num_groups = (profile_info >> 16) & 0xFF
+        print(f"  profile info: 0x{profile_info:08X}  groups={profile_num_groups}")
     if args.check_hls_version:
         hls_ver = hls.read(HLS_VERSION_REG)
         print(f"  hls version_reg: 0x{hls_ver:08X}  "
@@ -1168,7 +1361,7 @@ def main():
         print("  hls version_reg: (SKIPPED; use --check-hls-version to enable)")
 
     # ── Full reset + router setup ───────────────────────────────────────
-    print(f"\nWarm-up HLS (first-invocation init) ...")
+    print(f"\nWarm-up HLS control path ...")
     warmup_hls(
         hls,
         poll_sleep_s=(0.001 if args.benchmark_fast else 0.005),
@@ -1224,8 +1417,8 @@ def main():
     # Input buffer: up to n_neurons spike words (784 pixels max); output:
     # n_neurons LIF output spikes (one 32-bit word each).  Add 64-byte pad.
     n_buf_words = n_neurons + 16
-    buf_in  = MMIO(DMA_BUF_IN,  n_buf_words * 4 + 64)
-    buf_out = MMIO(DMA_BUF_OUT, n_buf_words * 4 + 64)
+    buf_in  = make_dma_buffer(DMA_BUF_IN,  n_buf_words * 4 + 64, label="MM2S")
+    buf_out = make_dma_buffer(DMA_BUF_OUT, n_buf_words * 4 + 64, label="S2MM")
 
     # ── Inference loop ─────────────────────────────────────────────────
     print(f"\nRunning {N} inference{'s' if N != 1 else ''} ...")
@@ -1317,7 +1510,10 @@ def main():
                                     poll_sleep_first_s=(0.0001 if args.benchmark_fast else 0.0005),
                                     zero_retry_sleep_s=0.00002,
                                     settle_poll_sleep_s=(0.00005 if args.benchmark_fast else 0.0002),
-                                    settle_stable_cycles_req=(2 if args.benchmark_fast else 5))
+                                    settle_stable_cycles_req=(2 if args.benchmark_fast else 5),
+                                    profile_enabled=profile_enabled,
+                                    profile_num_groups=profile_num_groups,
+                                    profile_drain_timeout_s=max(0.100, args.mm2s_tail_timeout_ms / 1000.0))
         t_iter1 = time.perf_counter()
 
         hw_pred, hw_pred_source = classify_hw(hw_res, n_classes, fps_per_class, sw_pred_ttfs)
@@ -1434,6 +1630,8 @@ def main():
             'spike_pack_ms': (t_pack1 - t_pack0) * 1000.0,
             'hw_run_ms':     float(hw_timing.get('run_total_ms', 0.0)),
             'hw_timing':     hw_timing,
+            'profile_incomplete': bool(hw_res.get('profile_incomplete', False)),
+            'profile':       hw_res.get('profile', {}),
         })
 
     elapsed = time.time() - t_start
@@ -1659,6 +1857,25 @@ def main():
     with open(RESULT_PATH, 'w') as f:
         json.dump(summary, f, indent=2)
     print(f"\nSaved: {RESULT_PATH}")
+
+    if PROFILE_PATH is not None:
+        profile_rows = []
+        for row in results_log:
+            profile_row = {
+                'idx': row['idx'],
+                'label': row['lbl'],
+                'profile_incomplete': int(row.get('profile_incomplete', False)),
+            }
+            profile_row.update(row.get('profile', {}))
+            profile_rows.append(profile_row)
+        fieldnames = list(profile_rows[0].keys()) if profile_rows else [
+            'idx', 'label', 'profile_incomplete'
+        ]
+        with open(PROFILE_PATH, 'w', newline='') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(profile_rows)
+        print(f"Saved profile CSV: {PROFILE_PATH}")
 
     hls.close()
     cfg.close()

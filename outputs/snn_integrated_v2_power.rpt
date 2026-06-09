@@ -1,7 +1,7 @@
 Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 | Tool Version     : Vivado v.2025.2 (lin64) Build 6299465 Fri Nov 14 12:34:56 MST 2025
-| Date             : Tue Jun  2 14:53:30 2026
+| Date             : Thu Jun  4 17:12:01 2026
 | Host             : ym-ThinkSystem-ST558-7Y16CTO1WW running 64-bit Ubuntu 24.04.4 LTS
 | Command          : report_power -file /home/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/outputs/snn_integrated_v2_power.rpt
 | Design           : snn_integrated_top
@@ -53,15 +53,15 @@ Table of Contents
 | On-Chip                  | Power (W) | Used     | Available | Utilization (%) |
 +--------------------------+-----------+----------+-----------+-----------------+
 | Clocks                   |     0.040 |        3 |       --- |             --- |
-| Slice Logic              |     0.018 |    28427 |       --- |             --- |
-|   LUT as Logic           |     0.013 |     8903 |     53200 |           16.73 |
-|   LUT as Distributed RAM |     0.003 |     5194 |     17400 |           29.85 |
+| Slice Logic              |     0.018 |    28478 |       --- |             --- |
+|   LUT as Logic           |     0.013 |     8868 |     53200 |           16.67 |
+|   LUT as Distributed RAM |     0.002 |     5194 |     17400 |           29.85 |
 |   CARRY4                 |     0.001 |      414 |     13300 |            3.11 |
-|   Register               |    <0.001 |     9843 |    106400 |            9.25 |
+|   Register               |    <0.001 |     9842 |    106400 |            9.25 |
 |   LUT as Shift Register  |    <0.001 |      388 |     17400 |            2.23 |
-|   F7/F8 Muxes            |    <0.001 |      654 |     53200 |            1.23 |
-|   Others                 |     0.000 |      801 |       --- |             --- |
-| Signals                  |     0.058 |    20233 |       --- |             --- |
+|   F7/F8 Muxes            |    <0.001 |      750 |     53200 |            1.41 |
+|   Others                 |     0.000 |      802 |       --- |             --- |
+| Signals                  |     0.057 |    20121 |       --- |             --- |
 | Block RAM                |     0.068 |      140 |       140 |          100.00 |
 | DSPs                     |     0.006 |       17 |       220 |            7.73 |
 | PS7                      |     1.543 |        1 |       --- |             --- |
@@ -153,15 +153,15 @@ Table of Contents
 | Name                       | Power (W) |
 +----------------------------+-----------+
 | snn_integrated_top         |     1.732 |
-|   u_block_design           |     1.658 |
-|     design_1_i             |     1.657 |
+|   u_block_design           |     1.659 |
+|     design_1_i             |     1.658 |
 |       axi_dma_0            |     0.007 |
 |       axi_dma_1            |     0.007 |
-|       axi_interconnect_0   |     0.004 |
+|       axi_interconnect_0   |     0.005 |
 |       axi_interconnect_hp0 |     0.007 |
 |       processing_system7_0 |     1.545 |
 |       snn_top_hls_0        |     0.086 |
-|   u_neuron_array           |     0.009 |
+|   u_neuron_array           |     0.008 |
 |   u_router_cfg_cmd_fifo    |     0.003 |
 |   u_spike_router           |     0.060 |
 |     spike_fifo             |     0.004 |

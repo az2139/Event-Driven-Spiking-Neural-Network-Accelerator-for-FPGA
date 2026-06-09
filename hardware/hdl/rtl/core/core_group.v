@@ -72,8 +72,14 @@ module core_group #(
     input  wire                         weight_exc,     // 1=excitatory weight
 
     // --- Status ---
-    output wire [15:0]                  spike_count,
-    output wire                         group_busy
+    output wire [31:0]                  spike_count,
+    output wire                         group_busy,
+
+    // --- Per-sample profiling ---
+    input  wire                         profile_active,
+    input  wire                         profile_start,
+    input  wire                         profile_stop,
+    output wire [5*32-1:0]              profile_snapshot
 );
 
     //=========================================================================
@@ -156,34 +162,19 @@ module core_group #(
     wire                       fifo_exc    = spike_fifo[fifo_rd_ptr][FIFO_ENTRY_WIDTH-1];
 
     //=========================================================================
-    // 4. Spike Flag Bitmap (for output scan)
+    // 4. Output Spike FIFO
+    //    Preserves actual fire order for TTFS. A bitmap records "has fired",
+    //    but loses ordering; first-spike inference needs ordering.
     //=========================================================================
-    localparam SF_DEPTH  = (NEURONS_PER_GROUP + 7) / 8;
-    localparam SF_ADDR_W = (SF_DEPTH <= 1) ? 1 : $clog2(SF_DEPTH);
+    reg [LOCAL_ID_WIDTH-1:0] out_fifo [0:SPIKE_BUFFER_DEPTH-1];
+    reg [FIFO_IDX_WIDTH-1:0] out_fifo_wr_ptr, out_fifo_rd_ptr;
+    reg [FIFO_IDX_WIDTH:0]   out_fifo_count;
+    reg                      out_fifo_push;
+    reg [LOCAL_ID_WIDTH-1:0] out_fifo_push_data;
 
-    reg [7:0] spike_flag_mem [0:SF_DEPTH-1];
-
-    reg                   sf_set_pending;
-    reg [SF_ADDR_W-1:0]   sf_set_addr;
-    reg [2:0]             sf_set_bit;
-    reg                   sf_clear_pending;
-    reg [SF_ADDR_W-1:0]   sf_clear_addr;
-    reg [7:0]             sf_clear_mask;
-
-    always @(posedge clk) begin
-        if (!rst_n) begin : sf_rst
-            integer j;
-            for (j = 0; j < SF_DEPTH; j = j + 1)
-                spike_flag_mem[j] <= 8'd0;
-        end else begin
-            if (sf_set_pending)
-                spike_flag_mem[sf_set_addr] <=
-                    spike_flag_mem[sf_set_addr] | (8'd1 << sf_set_bit);
-            if (sf_clear_pending)
-                spike_flag_mem[sf_clear_addr] <=
-                    spike_flag_mem[sf_clear_addr] & sf_clear_mask;
-        end
-    end
+    wire out_fifo_empty = (out_fifo_count == 0);
+    wire out_fifo_full  = (out_fifo_count >= SPIKE_BUFFER_DEPTH - 1);
+    wire [LOCAL_ID_WIDTH-1:0] out_fifo_head = out_fifo[out_fifo_rd_ptr];
 
     //=========================================================================
     // 5. Combinational: Leak & Synaptic Accumulation (DSP-friendly)
@@ -227,7 +218,7 @@ module core_group #(
     reg [LOCAL_ID_WIDTH-1:0] fired_neuron_id;
     reg [LOCAL_ID_WIDTH-1:0] intra_scan_idx;
     reg [LOCAL_ID_WIDTH-1:0] leak_addr_hold;
-    reg [15:0]               total_spikes;
+    reg [31:0]               total_spikes;
 
     // FIFO write signals (external or recurrent)
     reg                      fifo_push;
@@ -236,9 +227,61 @@ module core_group #(
 
     // Block external writes during intra-group routing to prevent FIFO write collision
     wire intra_routing = (state == ST_INTRA_ROUTE || state == ST_INTRA_READ);
+    wire event_pipeline_busy = (state == ST_SPIKE_RD)  ||
+                               (state == ST_SPIKE_CMP) ||
+                               (state == ST_SPIKE_WR)  ||
+                               intra_routing;
     assign ext_spike_ready = !fifo_full && !intra_routing;
-    assign group_busy  = (state != ST_IDLE) || !fifo_empty;
+    assign group_busy  = event_pipeline_busy || !fifo_empty || out_spike_valid || !out_fifo_empty;
     assign spike_count = total_spikes;
+
+    //=========================================================================
+    // Per-sample profiling
+    //   0: intra_route_start_count
+    //   1: intra_weight_lookup_count
+    //   2: intra_weight_nonzero_count
+    //   3: intra_fifo_push_count
+    //   4: intra_fifo_blocked_event_count
+    //=========================================================================
+    reg [31:0] profile_live [0:4];
+    reg [31:0] profile_snap [0:4];
+    integer profile_i;
+
+    generate
+        genvar profile_g;
+        for (profile_g = 0; profile_g < 5; profile_g = profile_g + 1) begin : gen_profile_snapshot
+            assign profile_snapshot[profile_g*32 +: 32] = profile_snap[profile_g];
+        end
+    endgenerate
+
+    always @(posedge clk) begin
+        if (!rst_n) begin
+            for (profile_i = 0; profile_i < 5; profile_i = profile_i + 1) begin
+                profile_live[profile_i] <= 32'd0;
+                profile_snap[profile_i] <= 32'd0;
+            end
+        end else begin
+            if (profile_start) begin
+                for (profile_i = 0; profile_i < 5; profile_i = profile_i + 1)
+                    profile_live[profile_i] <= 32'd0;
+            end else if (profile_active) begin
+                if (state == ST_SPIKE_WR && sp_fired)
+                    profile_live[0] <= profile_live[0] + 1'b1;
+                if (state == ST_INTRA_READ)
+                    profile_live[1] <= profile_live[1] + 1'b1;
+                if (state == ST_INTRA_ROUTE && wm_weight != 0)
+                    profile_live[2] <= profile_live[2] + 1'b1;
+                if (state == ST_INTRA_ROUTE && wm_weight != 0 && !fifo_full)
+                    profile_live[3] <= profile_live[3] + 1'b1;
+                if (state == ST_INTRA_ROUTE && wm_weight != 0 && fifo_full)
+                    profile_live[4] <= profile_live[4] + 1'b1;
+            end
+            if (profile_stop) begin
+                for (profile_i = 0; profile_i < 5; profile_i = profile_i + 1)
+                    profile_snap[profile_i] <= profile_live[profile_i];
+            end
+        end
+    end
 
     always @(posedge clk) begin
         if (!rst_n) begin
@@ -259,20 +302,19 @@ module core_group #(
             intra_scan_idx  <= 0;
             leak_addr_hold  <= 0;
             total_spikes    <= 0;
-            sf_set_pending  <= 0;
-            sf_set_addr     <= 0;
-            sf_set_bit      <= 0;
             fifo_wr_ptr     <= 0;
             fifo_rd_ptr     <= 0;
             fifo_count      <= 0;
             fifo_push       <= 0;
             fifo_pop        <= 0;
+            out_fifo_push   <= 0;
+            out_fifo_push_data <= 0;
         end else begin
             // Defaults
             ns_we          <= 0;
-            sf_set_pending <= 0;
             fifo_push      <= 0;
             fifo_pop       <= 0;
+            out_fifo_push  <= 0;
             wm_we          <= 0;
 
             //--- External FIFO write (blocked during intra-group routing) ---
@@ -377,12 +419,13 @@ module core_group #(
                             ns_din <= ns_dout;  // Keep during refractory
                             state  <= ST_IDLE;  // BUG FIX: was missing → FSM stuck
                         end else if (sp_fired) begin
-                            // Fired: reset membrane, set refractory, set flag
+                            // Fired: reset membrane, set refractory, enqueue output in fire order
                             ns_din <= {{DATA_WIDTH{1'b0}}, global_refrac_period};
-                            sf_set_pending <= 1;
-                            sf_set_addr    <= sp_addr[LOCAL_ID_WIDTH-1:3];
-                            sf_set_bit     <= sp_addr[2:0];
                             total_spikes   <= total_spikes + 1;
+                            if (!out_fifo_full) begin
+                                out_fifo_push      <= 1'b1;
+                                out_fifo_push_data <= sp_addr;
+                            end
 
                             // Start intra-group recurrent routing
                             fired_neuron_id <= sp_addr;
@@ -452,55 +495,39 @@ module core_group #(
     end
 
     //=========================================================================
-    // 7. Output Spike Scan (bitmap → event router)
-    //    Scans spike_flag_mem, outputs one spike per cycle when ready
+    // 7. Output Spike FIFO (fire order → event router)
     //=========================================================================
-    reg [LOCAL_ID_WIDTH-1:0] scan_idx;
-    reg [7:0]                scan_byte;
-    reg [2:0]                scan_bit_pos;
-    reg                      scan_active;
+    wire out_fifo_output_slot_free = !out_spike_valid || out_spike_ready;
+    wire out_fifo_load             = out_fifo_output_slot_free && !out_fifo_empty;
+    wire out_fifo_push_accept      = out_fifo_push && !out_fifo_full;
 
     always @(posedge clk) begin
         if (!rst_n) begin
-            out_spike_valid     <= 0;
-            out_spike_neuron_id <= 0;
-            scan_idx            <= 0;
-            scan_byte           <= 0;
-            scan_bit_pos        <= 0;
-            scan_active         <= 0;
-            sf_clear_pending    <= 0;
-            sf_clear_addr       <= 0;
-            sf_clear_mask       <= 8'hFF;
+            out_spike_valid     <= 1'b0;
+            out_spike_neuron_id <= {LOCAL_ID_WIDTH{1'b0}};
+            out_fifo_wr_ptr     <= {FIFO_IDX_WIDTH{1'b0}};
+            out_fifo_rd_ptr     <= {FIFO_IDX_WIDTH{1'b0}};
+            out_fifo_count      <= {(FIFO_IDX_WIDTH+1){1'b0}};
         end else begin
-            sf_clear_pending <= 0;
+            if (out_spike_valid && out_spike_ready)
+                out_spike_valid <= 1'b0;
 
-            if (out_spike_ready || !out_spike_valid) begin
-                out_spike_valid <= 0;
-
-                if (!scan_active) begin
-                    scan_byte    <= spike_flag_mem[scan_idx[LOCAL_ID_WIDTH-1:3]];
-                    scan_bit_pos <= 0;
-                    scan_active  <= 1;
-                end else begin
-                    if (scan_byte[scan_bit_pos]) begin
-                        out_spike_valid     <= 1;
-                        out_spike_neuron_id <= {scan_idx[LOCAL_ID_WIDTH-1:3], scan_bit_pos};
-                        sf_clear_pending    <= 1;
-                        sf_clear_addr       <= scan_idx[LOCAL_ID_WIDTH-1:3];
-                        sf_clear_mask       <= ~(8'd1 << scan_bit_pos);
-                    end
-
-                    if (scan_bit_pos == 3'd7) begin
-                        scan_active <= 0;
-                        if (scan_idx + 8 >= NEURONS_PER_GROUP)
-                            scan_idx <= 0;
-                        else
-                            scan_idx <= scan_idx + 8;
-                    end else begin
-                        scan_bit_pos <= scan_bit_pos + 1;
-                    end
-                end
+            if (out_fifo_load) begin
+                out_spike_valid     <= 1'b1;
+                out_spike_neuron_id <= out_fifo_head;
+                out_fifo_rd_ptr     <= out_fifo_rd_ptr + 1'b1;
             end
+
+            if (out_fifo_push_accept) begin
+                out_fifo[out_fifo_wr_ptr] <= out_fifo_push_data;
+                out_fifo_wr_ptr <= out_fifo_wr_ptr + 1'b1;
+            end
+
+            case ({out_fifo_push_accept, out_fifo_load})
+                2'b10: out_fifo_count <= out_fifo_count + 1'b1;
+                2'b01: out_fifo_count <= out_fifo_count - 1'b1;
+                default: out_fifo_count <= out_fifo_count;
+            endcase
         end
     end
 
@@ -513,10 +540,10 @@ module core_group #(
             neuron_state_mem[init_i] = {STATE_WIDTH{1'b0}};
         for (init_i = 0; init_i < WEIGHT_DEPTH; init_i = init_i + 1)
             weight_mem[init_i] = {WM_DATA_WIDTH{1'b0}};
-        for (init_i = 0; init_i < SF_DEPTH; init_i = init_i + 1)
-            spike_flag_mem[init_i] = 8'd0;
         for (init_i = 0; init_i < SPIKE_BUFFER_DEPTH; init_i = init_i + 1)
             spike_fifo[init_i] = {FIFO_ENTRY_WIDTH{1'b0}};
+        for (init_i = 0; init_i < SPIKE_BUFFER_DEPTH; init_i = init_i + 1)
+            out_fifo[init_i] = {LOCAL_ID_WIDTH{1'b0}};
     end
 
 endmodule

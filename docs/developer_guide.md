@@ -38,7 +38,7 @@ hardware/
 │   └── top/            # Top-level integration (snn_core_group_top)
 ├── hdl/tb/             # Testbenches (3 active)
 ├── hls/                # Vitis HLS
-│   ├── src/            # HLS source (snn_top_hls)
+│   ├── src/            # Learning HLS and lightweight inference/profile HLS
 │   ├── include/        # Headers
 │   ├── test/           # HLS testbenches
 │   └── scripts/        # HLS build scripts
@@ -61,10 +61,25 @@ cd hardware/scripts
 
 ### HLS Build
 
+Build the original learning-capable HLS IP:
+
 ```bash
 cd hardware/hls
 ./scripts/build_hls.sh --clean
 ```
+
+Build the lightweight HLS IP used by `snn_core_group_top`:
+
+```bash
+cd hardware/hls
+./scripts/build_inference_profile_hls.sh --clean
+```
+
+`snn_inference_profile_hls` keeps the spike stream, control/status registers,
+and RTL spike handshake. It intentionally omits HLS weight memory, STDP,
+R-STDP, traces, eligibility, encoder state, weight streams, and checkpoint
+support. The RTL core groups and connectivity table are the only synaptic
+storage in this build.
 
 ### Vivado Synthesis Check
 
@@ -82,7 +97,26 @@ Output: utilization reports in `outputs/` such as:
 - `event_router_ng_utilization.rpt`
 - `connectivity_table_16g_utilization.rpt`
 
-For a full bitstream, run `hardware/scripts/rebuild_integrated.tcl`, which performs synthesis, implementation, and `write_bitstream`.
+For the legacy `snn_integrated_top` bitstream, run:
+
+```bash
+vivado -mode batch -source rebuild_integrated.tcl
+```
+
+For the hierarchical `snn_core_group_top` bitstream with communication profile
+counters, build the lightweight HLS IP first and then run:
+
+```bash
+cd hardware/hls
+./scripts/build_inference_profile_hls.sh --clean
+cd ../scripts
+vivado -mode batch -source rebuild_core_group_integrated.tcl
+```
+
+The core-group build writes `outputs/snn_core_group_profile.bit` and
+`outputs/snn_core_group_profile.hwh`. It also verifies that `event_router_ng`,
+`core_group`, and `synaptic_connectivity_table` are present and that the legacy
+`spike_router` is absent.
 
 ## Supported Workflow Policy
 
@@ -220,7 +254,12 @@ v++ -c --mode hls \
 
 ### Optimization
 
-Current HLS design targets 720 neurons with aggressive pipelining:
+The learning-capable `snn_top_hls` contains the weight memory and learning
+loops. The hierarchical inference/profile route uses
+`snn_inference_profile_hls`, which contains no synaptic memory or learning
+state.
+
+Learning HLS optimization features include:
 
 - **Pipeline**: `#pragma HLS PIPELINE II=1` — all major loops (LTD, LTP, WEIGHT_SUM) run at II=1
 - **Loop unroll**: `#pragma HLS UNROLL factor=4` — used on LTD_LOOP, RSTDP_INNER, DECAY loops

@@ -143,13 +143,19 @@ module snn_core_group_top #(
     wire [HLS_NEURON_ID_WIDTH-1:0]  hls_spike_out_neuron_id;
     wire [HLS_WEIGHT_WIDTH-1:0]     hls_spike_out_weight;
     wire                            rtl_spike_in_ready;
+    reg                             hls_spike_out_toggle_d;
+    wire                            hls_spike_out_pulse;
+    wire                            router_ext_spike_ready;
+    reg                             hls_ext_pending;
+    reg  [GLOBAL_ID_WIDTH-1:0]      hls_ext_pending_id;
+    reg  [WEIGHT_WIDTH-1:0]         hls_ext_pending_weight;
 
     wire                            rtl_spike_out_valid;
     wire [HLS_NEURON_ID_WIDTH-1:0]  rtl_spike_out_neuron_id;
     wire [HLS_WEIGHT_WIDTH-1:0]     rtl_spike_out_weight;
     wire                            hls_spike_in_ready;
 
-    // HLS learned-weight update channel (HLS -> Event Router)
+    // Inference-only HLS has no learned-weight update channel.
     wire                            hls_learn_weight_valid;
     wire [GROUP_ID_WIDTH-1:0]       hls_learn_weight_group;
     wire [LOCAL_ID_WIDTH-1:0]       hls_learn_weight_src;
@@ -160,6 +166,16 @@ module snn_core_group_top #(
     wire [GROUP_ID_WIDTH-1:0]       hls_learn_weight_dst_group;
     wire [FANOUT_IDX_WIDTH-1:0]     hls_learn_weight_fanout_idx;
     wire                            rtl_learn_weight_ready;
+
+    assign hls_learn_weight_valid      = 1'b0;
+    assign hls_learn_weight_group      = {GROUP_ID_WIDTH{1'b0}};
+    assign hls_learn_weight_src        = {LOCAL_ID_WIDTH{1'b0}};
+    assign hls_learn_weight_dst        = {LOCAL_ID_WIDTH{1'b0}};
+    assign hls_learn_weight_data       = {WEIGHT_WIDTH{1'b0}};
+    assign hls_learn_weight_exc        = 1'b0;
+    assign hls_learn_weight_is_inter   = 1'b0;
+    assign hls_learn_weight_dst_group  = {GROUP_ID_WIDTH{1'b0}};
+    assign hls_learn_weight_fanout_idx = {FANOUT_IDX_WIDTH{1'b0}};
 
     wire                            hls_snn_enable;
     wire                            hls_snn_reset;
@@ -183,6 +199,12 @@ module snn_core_group_top #(
     wire [15:0]                     cfg_global_threshold;
     wire [7:0]                      cfg_global_leak_rate;
     wire [7:0]                      cfg_global_refrac_period;
+    wire                            cfg_profile_start;
+    wire                            cfg_profile_stop;
+    wire [15:0]                     cfg_profile_expected_count;
+    wire [7:0]                      cfg_profile_index;
+    reg  [31:0]                     cfg_profile_data;
+    wire [31:0]                     cfg_profile_info;
 
     //=========================================================================
     // Internal Wiring: Event Router <-> Core Groups
@@ -208,8 +230,9 @@ module snn_core_group_top #(
     wire                                        grp_weight_exc;
 
     // Core group status
-    wire [NUM_GROUPS*16-1:0]                    grp_spike_count;
+    wire [NUM_GROUPS*32-1:0]                    grp_spike_count;
     wire [NUM_GROUPS-1:0]                       grp_busy;
+    wire [NUM_GROUPS*5*32-1:0]                  grp_profile_snapshot;
 
     //=========================================================================
     // Internal Wiring: Event Router <-> Connectivity Table
@@ -241,10 +264,13 @@ module snn_core_group_top #(
     wire                          learn_spike_valid;
     wire [GLOBAL_ID_WIDTH-1:0]    learn_spike_src_id;
     wire                          learn_spike_ready;
+    wire                          first_spike_tap_valid;
+    wire [GLOBAL_ID_WIDTH-1:0]    first_spike_tap_id;
+    wire [HLS_WEIGHT_WIDTH-1:0]   first_spike_tap_weight;
 
-    // Enable learned-weight bridge from HLS to Event Router.
-    // If block design does not expose learn_weight_* yet, set this to 0.
-    localparam                    LEARN_WEIGHT_BRIDGE_ENABLE = 1'b1;
+    // The inference/profile build observes routing only and never updates
+    // synaptic storage from HLS.
+    localparam                    LEARN_WEIGHT_BRIDGE_ENABLE = 1'b0;
     wire                          learn_weight_valid_br;
     wire [GROUP_ID_WIDTH-1:0]     learn_weight_group_br;
     wire [LOCAL_ID_WIDTH-1:0]     learn_weight_src_br;
@@ -269,6 +295,161 @@ module snn_core_group_top #(
     // Router status
     wire [31:0]                   routed_spike_count;
     wire                          router_busy;
+    wire [(11+2*NUM_GROUPS)*32-1:0] router_profile_snapshot;
+
+    //=========================================================================
+    // Global first-spike tap for TTFS first-spike classification
+    //=========================================================================
+    // event_router_ng round-robins among group outputs before forwarding the
+    // observation to HLS. For first-spike-only classification, tap the earliest
+    // group output directly so the HLS latch is not biased by router RR order.
+    reg                          first_spike_tap_pending;
+    reg                          first_spike_tap_done;
+    reg [GLOBAL_ID_WIDTH-1:0]    first_spike_tap_id_reg;
+    reg                          hls_spike_in_ready_d;
+    reg                          first_spike_tap_seen;
+    reg [GLOBAL_ID_WIDTH-1:0]    first_spike_tap_candidate;
+    integer                      first_spike_tap_i;
+
+    always @(*) begin
+        first_spike_tap_seen = 1'b0;
+        first_spike_tap_candidate = {GLOBAL_ID_WIDTH{1'b0}};
+        for (first_spike_tap_i = 0; first_spike_tap_i < NUM_GROUPS; first_spike_tap_i = first_spike_tap_i + 1) begin
+            if (!first_spike_tap_seen && grp_spike_valid[first_spike_tap_i]) begin
+                first_spike_tap_seen = 1'b1;
+                first_spike_tap_candidate = {
+                    first_spike_tap_i[GROUP_ID_WIDTH-1:0],
+                    grp_spike_neuron_id[first_spike_tap_i*LOCAL_ID_WIDTH +: LOCAL_ID_WIDTH]
+                };
+            end
+        end
+    end
+
+    always @(posedge clk_100mhz) begin
+        if (!rst_n_sync || hls_snn_reset || cfg_profile_start) begin
+            first_spike_tap_pending <= 1'b0;
+            first_spike_tap_done    <= 1'b0;
+            first_spike_tap_id_reg  <= {GLOBAL_ID_WIDTH{1'b0}};
+            hls_spike_in_ready_d    <= 1'b0;
+        end else begin
+            hls_spike_in_ready_d <= hls_spike_in_ready;
+
+            if (first_spike_tap_pending && (hls_spike_in_ready != hls_spike_in_ready_d)) begin
+                first_spike_tap_pending <= 1'b0;
+            end else if (!first_spike_tap_pending && !first_spike_tap_done && first_spike_tap_seen) begin
+                first_spike_tap_pending <= 1'b1;
+                first_spike_tap_done    <= 1'b1;
+                first_spike_tap_id_reg  <= first_spike_tap_candidate;
+            end
+        end
+    end
+
+    assign first_spike_tap_valid  = first_spike_tap_pending;
+    assign first_spike_tap_id     = first_spike_tap_id_reg;
+    assign first_spike_tap_weight = {HLS_WEIGHT_WIDTH{1'b0}};
+
+    //=========================================================================
+    // Per-sample profile control and snapshot readback
+    //=========================================================================
+    localparam PROFILE_ROUTER_SCALAR_COUNT = 11;
+    localparam PROFILE_ROUTER_TOTAL_COUNT  = 11 + 2*NUM_GROUPS;
+    localparam PROFILE_CORE_BASE           = PROFILE_ROUTER_TOTAL_COUNT;
+    localparam PROFILE_TOTAL_COUNT         = PROFILE_CORE_BASE + 5*NUM_GROUPS;
+    localparam [7:0] PROFILE_NUM_GROUPS_INFO = NUM_GROUPS;
+    localparam [15:0] PROFILE_TOTAL_COUNT_INFO = PROFILE_TOTAL_COUNT;
+
+    reg        profile_active;
+    reg        profile_done;
+    reg [31:0] total_latency_live;
+    reg [31:0] total_latency_snapshot;
+    reg [31:0] first_spike_latency_live;
+    reg [31:0] first_spike_latency_snapshot;
+    reg [31:0] service_cycles_live;
+    reg [31:0] service_cycles_snapshot;
+    reg [15:0] sample_input_count;
+    reg        sample_input_done;
+    reg        sample_service_done;
+    reg        sample_seen_input;
+    reg        sample_seen_output;
+    integer profile_sel;
+
+    assign cfg_profile_info = {8'h01, PROFILE_NUM_GROUPS_INFO, PROFILE_TOTAL_COUNT_INFO};
+
+    always @(posedge clk_100mhz) begin
+        if (!rst_n_sync || hls_snn_reset) begin
+            profile_active          <= 1'b0;
+            profile_done            <= 1'b0;
+            total_latency_live      <= 32'd0;
+            total_latency_snapshot  <= 32'd0;
+            first_spike_latency_live     <= 32'd0;
+            first_spike_latency_snapshot <= 32'd0;
+            service_cycles_live          <= 32'd0;
+            service_cycles_snapshot      <= 32'd0;
+            sample_input_count           <= 16'd0;
+            sample_input_done            <= 1'b0;
+            sample_service_done          <= 1'b0;
+            sample_seen_input            <= 1'b0;
+            sample_seen_output           <= 1'b0;
+        end else begin
+            if (cfg_profile_start) begin
+                profile_active               <= 1'b1;
+                profile_done                 <= 1'b0;
+                total_latency_live           <= 32'd0;
+                first_spike_latency_live     <= 32'd0;
+                first_spike_latency_snapshot <= 32'd0;
+                service_cycles_live          <= 32'd0;
+                service_cycles_snapshot      <= 32'd0;
+                sample_input_count           <= 16'd0;
+                sample_input_done            <= (cfg_profile_expected_count == 16'd0);
+                sample_service_done          <= 1'b0;
+                sample_seen_input            <= 1'b0;
+                sample_seen_output           <= 1'b0;
+            end else if (profile_active) begin
+                total_latency_live <= total_latency_live + 1'b1;
+                if (hls_spike_out_pulse && !sample_seen_input) begin
+                    sample_seen_input <= 1'b1;
+                end
+                if (hls_spike_out_pulse && cfg_profile_expected_count != 16'd0) begin
+                    sample_input_count <= sample_input_count + 1'b1;
+                    if (sample_input_count + 1'b1 >= cfg_profile_expected_count)
+                        sample_input_done <= 1'b1;
+                end
+                if (sample_seen_input) begin
+                    if (!sample_service_done)
+                        service_cycles_live <= service_cycles_live + 1'b1;
+                    if (!sample_seen_output)
+                        first_spike_latency_live <= first_spike_latency_live + 1'b1;
+                end
+                if (sample_seen_input && !sample_seen_output && rtl_spike_out_valid) begin
+                    sample_seen_output <= 1'b1;
+                    first_spike_latency_snapshot <= first_spike_latency_live;
+                end
+                if (sample_seen_input && !sample_service_done && sample_input_done &&
+                    !hls_ext_pending && !router_busy && (grp_busy == {NUM_GROUPS{1'b0}})) begin
+                    sample_service_done <= 1'b1;
+                    service_cycles_snapshot <= service_cycles_live;
+                end
+            end
+            if (cfg_profile_stop) begin
+                profile_active         <= 1'b0;
+                profile_done           <= 1'b1;
+                total_latency_snapshot <= total_latency_live;
+                if (!sample_service_done)
+                    service_cycles_snapshot <= service_cycles_live;
+            end
+        end
+    end
+
+    always @(*) begin
+        cfg_profile_data = 32'd0;
+        profile_sel = cfg_profile_index;
+        if (profile_sel == 10)
+            cfg_profile_data = total_latency_snapshot;
+        else if (profile_sel < PROFILE_ROUTER_TOTAL_COUNT)
+            cfg_profile_data = router_profile_snapshot[profile_sel*32 +: 32];
+        else if (profile_sel < PROFILE_TOTAL_COUNT)
+            cfg_profile_data = grp_profile_snapshot[(profile_sel-PROFILE_CORE_BASE)*32 +: 32];
+    end
 
     //=========================================================================
     // Config Register Decode Logic
@@ -338,13 +519,13 @@ module snn_core_group_top #(
     reg [31:0] total_neuron_spikes;
 
     // Parametric spike summation: returns 0 for out-of-range group indices
-    function [15:0] safe_spike_count;
+    function [31:0] safe_spike_count;
         input integer idx;
         begin
             if (idx < NUM_GROUPS)
-                safe_spike_count = grp_spike_count[16*idx +: 16];
+                safe_spike_count = grp_spike_count[32*idx +: 32];
             else
-                safe_spike_count = 16'd0;
+                safe_spike_count = 32'd0;
         end
     endfunction
 
@@ -414,38 +595,26 @@ module snn_core_group_top #(
         .debug_learning_active (debug_learning_active),
 
         // HLS → RTL Spike Interface
-        .hls_spike_out_valid     (hls_spike_out_valid),
-        .hls_spike_out_neuron_id (hls_spike_out_neuron_id),
-        .hls_spike_out_weight    (hls_spike_out_weight),
-        .rtl_spike_in_ready      (rtl_spike_in_ready),
+        .spike_in_valid          (hls_spike_out_valid),
+        .spike_in_neuron_id      (hls_spike_out_neuron_id),
+        .spike_in_weight         (hls_spike_out_weight),
+        .spike_in_ready          (rtl_spike_in_ready),
 
         // RTL → HLS Spike Interface
-        .rtl_spike_out_valid     (rtl_spike_out_valid),
-        .rtl_spike_out_neuron_id (rtl_spike_out_neuron_id),
-        .rtl_spike_out_weight    (rtl_spike_out_weight),
-        .hls_spike_in_ready      (hls_spike_in_ready),
-
-        // HLS -> RTL learned-weight update interface
-        .hls_learn_weight_valid     (hls_learn_weight_valid),
-        .hls_learn_weight_group     (hls_learn_weight_group),
-        .hls_learn_weight_src       (hls_learn_weight_src),
-        .hls_learn_weight_dst       (hls_learn_weight_dst),
-        .hls_learn_weight_data      (hls_learn_weight_data),
-        .hls_learn_weight_exc       (hls_learn_weight_exc),
-        .hls_learn_weight_is_inter  (hls_learn_weight_is_inter),
-        .hls_learn_weight_dst_group (hls_learn_weight_dst_group),
-        .hls_learn_weight_fanout_idx(hls_learn_weight_fanout_idx),
-        .rtl_learn_weight_ready     (rtl_learn_weight_ready),
+        .spike_out_valid         (rtl_spike_out_valid),
+        .spike_out_neuron_id     (rtl_spike_out_neuron_id),
+        .spike_out_weight        (rtl_spike_out_weight),
+        .spike_out_ready         (hls_spike_in_ready),
 
         // SNN Control
-        .hls_snn_enable          (hls_snn_enable),
-        .hls_snn_reset           (hls_snn_reset),
-        .rtl_snn_ready           (rtl_snn_ready),
-        .rtl_snn_busy            (rtl_snn_busy),
+        .snn_enable              (hls_snn_enable),
+        .snn_reset               (hls_snn_reset),
+        .snn_ready               (rtl_snn_ready),
+        .snn_busy                (rtl_snn_busy),
 
         // HLS Neuron Parameters
-        .hls_threshold_out       (hls_threshold_out),
-        .hls_leak_rate_out       (hls_leak_rate_out),
+        .threshold_out           (hls_threshold_out),
+        .leak_rate_out           (hls_leak_rate_out),
 
         // Config Registers
         .cfg_router_config_we    (cfg_router_config_we),
@@ -464,7 +633,19 @@ module snn_core_group_top #(
         .cfg_neuron_spike_count  (total_neuron_spikes),
         .cfg_fifo_overflow       (1'b0),  // TODO: aggregate from groups
         .cfg_active_neurons      (8'd0),  // TODO: aggregate
-        .cfg_throughput_counter  (routed_spike_count)
+        .cfg_throughput_counter  (first_spike_latency_snapshot),
+        .cfg_service_cycles_counter(service_cycles_snapshot),
+        .cfg_router_busy        (router_busy),
+        .cfg_any_core_group_busy(|grp_busy),
+        .cfg_snn_ready          (rtl_snn_ready),
+        .cfg_profile_active     (profile_active),
+        .cfg_profile_done       (profile_done),
+        .cfg_profile_start      (cfg_profile_start),
+        .cfg_profile_stop       (cfg_profile_stop),
+        .cfg_profile_expected_count(cfg_profile_expected_count),
+        .cfg_profile_index      (cfg_profile_index),
+        .cfg_profile_data       (cfg_profile_data),
+        .cfg_profile_info       (cfg_profile_info)
     );
 
     //=========================================================================
@@ -479,25 +660,53 @@ module snn_core_group_top #(
     assign hls_global_id       = hls_spike_out_neuron_id[GLOBAL_ID_WIDTH-1:0];
     assign hls_weight_truncated = hls_spike_out_weight[WEIGHT_WIDTH-1:0];
 
-    // Event Router → HLS learning observation
-    // All 2048 neurons are addressable
-    assign rtl_spike_out_valid     = learn_spike_valid;
-    assign rtl_spike_out_neuron_id = learn_spike_src_id;
+    always @(posedge clk_100mhz) begin
+        if (!rst_n_sync || hls_snn_reset)
+            hls_spike_out_toggle_d <= 1'b0;
+        else
+            hls_spike_out_toggle_d <= hls_spike_out_valid;
+    end
+
+    assign hls_spike_out_pulse = hls_spike_out_valid ^ hls_spike_out_toggle_d;
+
+    always @(posedge clk_100mhz) begin
+        if (!rst_n_sync || hls_snn_reset) begin
+            hls_ext_pending        <= 1'b0;
+            hls_ext_pending_id     <= {GLOBAL_ID_WIDTH{1'b0}};
+            hls_ext_pending_weight <= {WEIGHT_WIDTH{1'b0}};
+        end else begin
+            if (hls_ext_pending && router_ext_spike_ready)
+                hls_ext_pending <= 1'b0;
+
+            if (hls_spike_out_pulse) begin
+                hls_ext_pending        <= 1'b1;
+                hls_ext_pending_id     <= hls_global_id;
+                hls_ext_pending_weight <= hls_weight_truncated;
+            end
+        end
+    end
+
+    // Event Router / first-spike tap → HLS observation
+    // The tap has priority only while it holds the first group output event.
+    assign rtl_spike_out_valid     = first_spike_tap_valid ? 1'b1 : learn_spike_valid;
+    assign rtl_spike_out_neuron_id = first_spike_tap_valid ? first_spike_tap_id : learn_spike_src_id;
     assign rtl_learn_weight_ready  = LEARN_WEIGHT_BRIDGE_ENABLE ? learn_weight_ready_br : 1'b0;
 
     // Weight bridge: zero-extend if WEIGHT_WIDTH < HLS_WEIGHT_WIDTH, else direct
     generate
         if (HLS_WEIGHT_WIDTH > WEIGHT_WIDTH)
-            assign rtl_spike_out_weight = {{(HLS_WEIGHT_WIDTH-WEIGHT_WIDTH){1'b0}},
-                                            ct_result_weight};
+            assign rtl_spike_out_weight = first_spike_tap_valid ? first_spike_tap_weight :
+                                          {{(HLS_WEIGHT_WIDTH-WEIGHT_WIDTH){1'b0}},
+                                           ct_result_weight};
         else
-            assign rtl_spike_out_weight = ct_result_weight[HLS_WEIGHT_WIDTH-1:0];
+            assign rtl_spike_out_weight = first_spike_tap_valid ? first_spike_tap_weight :
+                                          ct_result_weight[HLS_WEIGHT_WIDTH-1:0];
     endgenerate
 
-    assign learn_spike_ready       = hls_spike_in_ready;
+    assign learn_spike_ready       = first_spike_tap_valid ? 1'b0 : hls_spike_in_ready;
 
     // HLS ready/busy
-    assign rtl_spike_in_ready = !router_busy;
+    assign rtl_spike_in_ready = !hls_ext_pending;
     assign rtl_snn_ready      = !router_busy & (grp_busy == {NUM_GROUPS{1'b0}});
     assign rtl_snn_busy       = router_busy | (grp_busy != {NUM_GROUPS{1'b0}});
 
@@ -598,8 +807,12 @@ module snn_core_group_top #(
                 .weight_exc         (combined_weight_exc[g]),
 
                 // Status
-                .spike_count        (grp_spike_count[g*16 +: 16]),
-                .group_busy         (grp_busy[g])
+                .spike_count        (grp_spike_count[g*32 +: 32]),
+                .group_busy         (grp_busy[g]),
+                .profile_active     (profile_active),
+                .profile_start      (cfg_profile_start),
+                .profile_stop       (cfg_profile_stop),
+                .profile_snapshot   (grp_profile_snapshot[g*5*32 +: 5*32])
             );
         end
     endgenerate
@@ -692,11 +905,11 @@ module snn_core_group_top #(
         .grp_in_ready       (grp_in_ready),
 
         // External spike input (from HLS)
-        .ext_spike_valid    (hls_spike_out_valid),
-        .ext_spike_neuron_id(hls_global_id),
-        .ext_spike_weight   (hls_weight_truncated),
+        .ext_spike_valid    (hls_ext_pending),
+        .ext_spike_neuron_id(hls_ext_pending_id),
+        .ext_spike_weight   (hls_ext_pending_weight),
         .ext_spike_exc      (1'b1),  // HLS spikes default excitatory
-        .ext_spike_ready    (/* unused, use rtl_spike_in_ready */),
+        .ext_spike_ready    (router_ext_spike_ready),
 
         // Learning engine observation
         .learn_spike_valid  (learn_spike_valid),
@@ -748,7 +961,11 @@ module snn_core_group_top #(
 
         // Status
         .routed_spike_count (routed_spike_count),
-        .router_busy        (router_busy)
+        .router_busy        (router_busy),
+        .profile_active     (profile_active),
+        .profile_start      (cfg_profile_start),
+        .profile_stop       (cfg_profile_stop),
+        .profile_snapshot   (router_profile_snapshot)
     );
 
 endmodule

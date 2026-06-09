@@ -1,0 +1,48 @@
+Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Tool Version : Vivado v.2025.2 (lin64) Build 6299465 Fri Nov 14 12:34:56 MST 2025
+| Date         : Thu Jun  4 19:43:33 2026
+| Host         : ym-ThinkSystem-ST558-7Y16CTO1WW running 64-bit Ubuntu 24.04.4 LTS
+| Command      : report_utilization -hierarchical -hierarchical_depth 3 -file /home/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/outputs/snn_core_group_profile_utilization_hierarchical_synth.rpt
+| Design       : snn_core_group_top
+| Device       : xc7z020clg400-2
+| Speed File   : -2
+| Design State : Synthesized
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Utilization Design Information
+
+Table of Contents
+-----------------
+1. Utilization by Hierarchy
+
+1. Utilization by Hierarchy
+---------------------------
+
++------------------------------------+-----------------------------+------------+------------+---------+------+-------+--------+--------+------------+
+|              Instance              |            Module           | Total LUTs | Logic LUTs | LUTRAMs | SRLs |  FFs  | RAMB36 | RAMB18 | DSP Blocks |
++------------------------------------+-----------------------------+------------+------------+---------+------+-------+--------+--------+------------+
+| snn_core_group_top                 |                       (top) |      12207 |      11855 |     352 |    0 | 13712 |     85 |     32 |          0 |
+|   (snn_core_group_top)             |                       (top) |         54 |         54 |       0 |    0 |   246 |      0 |      0 |          0 |
+|   (u_block_design)                 |            design_1_wrapper |        838 |        838 |       0 |    0 |     0 |      0 |      0 |          0 |
+|   gen_core_groups[0].u_core_group  |                  core_group |        592 |        570 |      22 |    0 |   645 |      4 |      2 |          0 |
+|   gen_core_groups[10].u_core_group |                core_group_0 |        627 |        605 |      22 |    0 |   645 |      4 |      2 |          0 |
+|   gen_core_groups[11].u_core_group |                core_group_1 |        603 |        581 |      22 |    0 |   645 |      4 |      2 |          0 |
+|   gen_core_groups[12].u_core_group |                core_group_2 |        624 |        602 |      22 |    0 |   645 |      4 |      2 |          0 |
+|   gen_core_groups[13].u_core_group |                core_group_3 |        627 |        605 |      22 |    0 |   645 |      4 |      2 |          0 |
+|   gen_core_groups[14].u_core_group |                core_group_4 |        563 |        541 |      22 |    0 |   645 |      4 |      2 |          0 |
+|   gen_core_groups[15].u_core_group |                core_group_5 |        667 |        645 |      22 |    0 |   645 |      4 |      2 |          0 |
+|   gen_core_groups[1].u_core_group  |                core_group_6 |        595 |        573 |      22 |    0 |   645 |      4 |      2 |          0 |
+|   gen_core_groups[2].u_core_group  |                core_group_7 |        627 |        605 |      22 |    0 |   645 |      4 |      2 |          0 |
+|   gen_core_groups[3].u_core_group  |                core_group_8 |        603 |        581 |      22 |    0 |   645 |      4 |      2 |          0 |
+|   gen_core_groups[4].u_core_group  |                core_group_9 |        624 |        602 |      22 |    0 |   645 |      4 |      2 |          0 |
+|   gen_core_groups[5].u_core_group  |               core_group_10 |        628 |        606 |      22 |    0 |   645 |      4 |      2 |          0 |
+|   gen_core_groups[6].u_core_group  |               core_group_11 |        563 |        541 |      22 |    0 |   645 |      4 |      2 |          0 |
+|   gen_core_groups[7].u_core_group  |               core_group_12 |        667 |        645 |      22 |    0 |   645 |      4 |      2 |          0 |
+|   gen_core_groups[8].u_core_group  |               core_group_13 |        592 |        570 |      22 |    0 |   645 |      4 |      2 |          0 |
+|   gen_core_groups[9].u_core_group  |               core_group_14 |        596 |        574 |      22 |    0 |   645 |      4 |      2 |          0 |
+|   u_connectivity_table             | synaptic_connectivity_table |        181 |        181 |       0 |    0 |     2 |     21 |      0 |          0 |
+|   u_event_router                   |             event_router_ng |       1448 |       1448 |       0 |    0 |  3144 |      0 |      0 |          0 |
++------------------------------------+-----------------------------+------------+------------+---------+------+-------+--------+--------+------------+
+
+

@@ -1,7 +1,7 @@
 Copyright 1986-2022 Xilinx, Inc. All Rights Reserved. Copyright 2022-2025 Advanced Micro Devices, Inc. All Rights Reserved.
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 | Tool Version : Vivado v.2025.2 (lin64) Build 6299465 Fri Nov 14 12:34:56 MST 2025
-| Date         : Tue Jun  2 14:30:05 2026
+| Date         : Thu Jun  4 16:58:14 2026
 | Host         : ym-ThinkSystem-ST558-7Y16CTO1WW running 64-bit Ubuntu 24.04.4 LTS
 | Command      : report_utilization -file /home/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/outputs/connectivity_table_16g_utilization.rpt
 | Design       : synaptic_connectivity_table

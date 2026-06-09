@@ -21,10 +21,17 @@
 //   0x14  NEURON_PARAMS   [RW] [7:0] leak_rate, [15:8] refrac_period
 //   0x18  ROUTER_SPIKE_CNT[R]  [31:0] routed spike count
 //   0x1C  NEURON_SPIKE_CNT[R]  [31:0] neuron spike count
-//   0x20  STATUS          [R]  [0] fifo_overflow, [8:1] active_neurons
+//   0x20  STATUS          [R]  [0] fifo_overflow, [1] router_busy,
+//                              [2] any_core_group_busy, [3] snn_ready,
+//                              [4] profile_active, [5] profile_done,
+//                              [13:6] active_neurons
 //   0x24  THROUGHPUT      [R]  [31:0] first-spike latency counter
 //   0x28  VERSION         [R]  [31:0] = 0x534E4E01 ("SNN" + v1)
 //   0x2C  SERVICE_CYCLES  [R]  [31:0] service-time counter
+//   0x30  PROFILE_CTRL    [RW] [0] start/clear pulse, [1] stop/latch pulse
+//   0x34  PROFILE_INDEX   [RW] [7:0] snapshot counter index
+//   0x38  PROFILE_DATA    [R]  [31:0] selected snapshot counter
+//   0x3C  PROFILE_INFO    [R]  [31:0] profile metadata
 //-----------------------------------------------------------------------------
 
 `timescale 1ns / 1ps
@@ -116,7 +123,18 @@ module snn_config_regs #(
     input  wire                              fifo_overflow,
     input  wire [7:0]                        active_neurons,
     input  wire [31:0]                       throughput_counter,
-    input  wire [31:0]                       service_cycles_counter
+    input  wire [31:0]                       service_cycles_counter,
+    input  wire                              router_busy,
+    input  wire                              any_core_group_busy,
+    input  wire                              snn_ready,
+    input  wire                              profile_active,
+    input  wire                              profile_done,
+    output wire                              profile_start,
+    output wire                              profile_stop,
+    output wire [15:0]                       profile_expected_count,
+    output wire [7:0]                        profile_index,
+    input  wire [31:0]                       profile_data,
+    input  wire [31:0]                       profile_info
 );
 
     // AXI4-Lite interface parameters
@@ -137,6 +155,10 @@ module snn_config_regs #(
     localparam ADDR_THROUGHPUT       = 4'h9;   // 0x24
     localparam ADDR_VERSION          = 4'hA;   // 0x28
     localparam ADDR_SERVICE_CYCLES   = 4'hB;   // 0x2C
+    localparam ADDR_PROFILE_CTRL     = 4'hC;   // 0x30
+    localparam ADDR_PROFILE_INDEX    = 4'hD;   // 0x34
+    localparam ADDR_PROFILE_DATA     = 4'hE;   // 0x38
+    localparam ADDR_PROFILE_INFO     = 4'hF;   // 0x3C
 
     //=========================================================================
     // AXI4-Lite State Machine
@@ -172,6 +194,10 @@ module snn_config_regs #(
     reg  [15:0] reg_threshold;
     reg  [7:0]  reg_leak_rate;
     reg  [7:0]  reg_refrac_period;
+    reg  [7:0]  reg_profile_index;
+    reg  [15:0] reg_profile_expected_count;
+    reg         profile_start_pulse;
+    reg         profile_stop_pulse;
 
     // Config write enable pulse (one-cycle pulse on CONFIG_WDATA write)
     reg         config_we_pulse;
@@ -191,6 +217,10 @@ module snn_config_regs #(
     assign global_threshold    = reg_threshold;
     assign global_leak_rate    = reg_leak_rate;
     assign global_refrac_period = reg_refrac_period;
+    assign profile_start = profile_start_pulse;
+    assign profile_stop  = profile_stop_pulse;
+    assign profile_expected_count = reg_profile_expected_count;
+    assign profile_index = reg_profile_index;
 
     //=========================================================================
     // AXI Write Address Channel
@@ -245,9 +275,15 @@ module snn_config_regs #(
             reg_refrac_period <= 8'd10;         // Default: 10 cycles
             config_we_pulse  <= 1'b0;
             config_target    <= 2'd0;
+            reg_profile_index <= 8'd0;
+            reg_profile_expected_count <= 16'd0;
+            profile_start_pulse <= 1'b0;
+            profile_stop_pulse  <= 1'b0;
         end else begin
             // Default: clear config_we pulse after one cycle
             config_we_pulse <= 1'b0;
+            profile_start_pulse <= 1'b0;
+            profile_stop_pulse  <= 1'b0;
 
             if (write_en) begin
                 case (write_addr)
@@ -282,6 +318,20 @@ module snn_config_regs #(
                     ADDR_NEURON_PARAMS: begin
                         if (s_axi_wstrb[0]) reg_leak_rate      <= s_axi_wdata[7:0];
                         if (s_axi_wstrb[1]) reg_refrac_period   <= s_axi_wdata[15:8];
+                    end
+
+                    ADDR_PROFILE_CTRL: begin
+                        if (s_axi_wstrb[0]) begin
+                            profile_start_pulse <= s_axi_wdata[0];
+                            profile_stop_pulse  <= s_axi_wdata[1];
+                        end
+                        if (s_axi_wstrb[2]) reg_profile_expected_count[7:0]  <= s_axi_wdata[23:16];
+                        if (s_axi_wstrb[3]) reg_profile_expected_count[15:8] <= s_axi_wdata[31:24];
+                    end
+
+                    ADDR_PROFILE_INDEX: begin
+                        if (s_axi_wstrb[0])
+                            reg_profile_index <= s_axi_wdata[7:0];
                     end
 
                     default: ; // Read-only or reserved registers
@@ -347,10 +397,17 @@ module snn_config_regs #(
                     ADDR_NEURON_PARAMS:     r_data <= {16'd0, reg_refrac_period, reg_leak_rate};
                     ADDR_ROUTER_SPIKE_CNT:  r_data <= router_spike_count;
                     ADDR_NEURON_SPIKE_CNT:  r_data <= neuron_spike_count;
-                    ADDR_STATUS:            r_data <= {23'd0, active_neurons, fifo_overflow};
+                    ADDR_STATUS:            r_data <= {18'd0, active_neurons,
+                                                       profile_done, profile_active,
+                                                       snn_ready, any_core_group_busy,
+                                                       router_busy, fifo_overflow};
                     ADDR_THROUGHPUT:        r_data <= throughput_counter;
                     ADDR_VERSION:           r_data <= 32'h534E4E01;  // "SNN" + v1
                     ADDR_SERVICE_CYCLES:    r_data <= service_cycles_counter;
+                    ADDR_PROFILE_CTRL:      r_data <= {30'd0, profile_done, profile_active};
+                    ADDR_PROFILE_INDEX:     r_data <= {24'd0, reg_profile_index};
+                    ADDR_PROFILE_DATA:      r_data <= profile_data;
+                    ADDR_PROFILE_INFO:      r_data <= profile_info;
                     default:                r_data <= 32'hDEADBEEF;
                 endcase
             end else if (r_valid && s_axi_rready) begin

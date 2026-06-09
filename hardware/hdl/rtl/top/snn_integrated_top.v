@@ -251,7 +251,17 @@ module snn_integrated_top #(
         .cfg_fifo_overflow       (fifo_overflow),
         .cfg_active_neurons      (active_neurons),
         .cfg_throughput_counter  (cfg_throughput_counter),
-        .cfg_service_cycles_counter(cfg_service_cycles_counter)
+        .cfg_service_cycles_counter(cfg_service_cycles_counter),
+        .cfg_router_busy         (router_busy),
+        .cfg_any_core_group_busy (neuron_array_busy),
+        .cfg_snn_ready           (bd_snn_ready),
+        .cfg_profile_active      (1'b0),
+        .cfg_profile_done        (1'b0),
+        .cfg_profile_start       (),
+        .cfg_profile_stop        (),
+        .cfg_profile_index       (),
+        .cfg_profile_data        (32'd0),
+        .cfg_profile_info        (32'd0)
     );
 
     //=========================================================================

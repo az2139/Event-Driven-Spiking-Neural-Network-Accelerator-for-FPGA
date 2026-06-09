@@ -113,7 +113,13 @@ module event_router_ng #(
 
     // --- Status ---
     output wire [31:0]                  routed_spike_count,
-    output wire                         router_busy
+    output wire                         router_busy,
+
+    // --- Per-sample profiling ---
+    input  wire                         profile_active,
+    input  wire                         profile_start,
+    input  wire                         profile_stop,
+    output wire [(11+2*NUM_GROUPS)*32-1:0] profile_snapshot
 );
 
     //=========================================================================
@@ -141,6 +147,10 @@ module event_router_ng #(
     reg [LOCAL_ID_WIDTH-1:0] selected_neuron;   // Neuron ID from winning group
     reg                      ext_selected;      // External source selected
     reg [31:0]               spike_counter;
+    reg [GROUP_ID_WIDTH-1:0] ext_route_group;
+    reg [LOCAL_ID_WIDTH-1:0] ext_route_neuron;
+    reg [WEIGHT_WIDTH-1:0]   ext_route_weight;
+    reg                      ext_route_exc;
 
     assign routed_spike_count = spike_counter;
     assign router_busy = (state != ST_IDLE);
@@ -151,6 +161,84 @@ module event_router_ng #(
     // Fanout iteration
     //=========================================================================
     reg [FANOUT_IDX_WIDTH-1:0] fanout_idx;
+
+    //=========================================================================
+    // Per-sample profiling
+    //=========================================================================
+    reg [31:0] profile_live [0:10+2*NUM_GROUPS];
+    reg [31:0] profile_snap [0:10+2*NUM_GROUPS];
+    integer pi;
+
+    wire ext_input_accept = (state == ST_IDLE) && enable &&
+                            ext_spike_valid && !learn_weight_valid;
+    wire group_output_accept = |(grp_spike_valid & grp_spike_ready);
+    wire ct_result_consume = (state == ST_CT_DELIVER) && ct_result_valid &&
+                             (!ct_result_entry_valid ||
+                              (ct_result_dst_group >= NUM_GROUPS) ||
+                              grp_in_ready[ct_result_dst_group]);
+    wire ct_valid_consume = ct_result_consume && ct_result_entry_valid;
+    wire ct_invalid_consume = ct_result_consume && !ct_result_entry_valid;
+    wire fanout_delivery_accept = (state == ST_CT_DELIVER) && ct_result_valid &&
+                                  ct_result_entry_valid &&
+                                  (ct_result_dst_group < NUM_GROUPS) &&
+                                  grp_in_ready[ct_result_dst_group];
+    wire fanout_stall = (state == ST_CT_DELIVER) && ct_result_valid &&
+                        ct_result_entry_valid &&
+                        (ct_result_dst_group < NUM_GROUPS) &&
+                        !grp_in_ready[ct_result_dst_group];
+    wire ext_delivery_accept = (state == ST_EXT_ROUTE) &&
+                               (ext_route_group < NUM_GROUPS) &&
+                               grp_in_ready[ext_route_group];
+    wire ext_delivery_stall = (state == ST_EXT_ROUTE) &&
+                              (ext_route_group < NUM_GROUPS) &&
+                              !grp_in_ready[ext_route_group];
+
+    generate
+        genvar pg;
+        for (pg = 0; pg < 11+2*NUM_GROUPS; pg = pg + 1) begin : gen_profile_snapshot
+            assign profile_snapshot[pg*32 +: 32] = profile_snap[pg];
+        end
+    endgenerate
+
+    always @(posedge clk) begin
+        if (!rst_n) begin
+            for (pi = 0; pi < 11+2*NUM_GROUPS; pi = pi + 1) begin
+                profile_live[pi] <= 32'd0;
+                profile_snap[pi] <= 32'd0;
+            end
+        end else begin
+            if (profile_start) begin
+                for (pi = 0; pi < 11+2*NUM_GROUPS; pi = pi + 1)
+                    profile_live[pi] <= 32'd0;
+            end else if (profile_active) begin
+                if (ext_input_accept)       profile_live[0] <= profile_live[0] + 1'b1;
+                if (group_output_accept)    profile_live[1] <= profile_live[1] + 1'b1;
+                if (ct_lookup_en)           profile_live[2] <= profile_live[2] + 1'b1;
+                if (ct_valid_consume)       profile_live[3] <= profile_live[3] + 1'b1;
+                if (ct_invalid_consume)     profile_live[4] <= profile_live[4] + 1'b1;
+                if (state != ST_IDLE)       profile_live[5] <= profile_live[5] + 1'b1;
+                else                        profile_live[6] <= profile_live[6] + 1'b1;
+                if (fanout_stall || ext_delivery_stall)
+                    profile_live[7] <= profile_live[7] + 1'b1;
+                if (fanout_delivery_accept && selected_group != ct_result_dst_group)
+                    profile_live[8] <= profile_live[8] + 1'b1;
+                if (fanout_delivery_accept && selected_group == ct_result_dst_group)
+                    profile_live[9] <= profile_live[9] + 1'b1;
+                for (pi = 0; pi < NUM_GROUPS; pi = pi + 1) begin
+                    if ((fanout_delivery_accept && ct_result_dst_group == pi) ||
+                        (ext_delivery_accept && ext_route_group == pi))
+                        profile_live[11+pi] <= profile_live[11+pi] + 1'b1;
+                    if ((fanout_stall && ct_result_dst_group == pi) ||
+                        (ext_delivery_stall && ext_route_group == pi))
+                        profile_live[11+NUM_GROUPS+pi] <= profile_live[11+NUM_GROUPS+pi] + 1'b1;
+                end
+            end
+            if (profile_stop) begin
+                for (pi = 0; pi < 11+2*NUM_GROUPS; pi = pi + 1)
+                    profile_snap[pi] <= profile_live[pi];
+            end
+        end
+    end
 
     //=========================================================================
     // Main Router FSM
@@ -165,6 +253,10 @@ module event_router_ng #(
             selected_neuron <= 0;
             ext_selected    <= 0;
             spike_counter   <= 0;
+            ext_route_group <= 0;
+            ext_route_neuron <= 0;
+            ext_route_weight <= 0;
+            ext_route_exc <= 0;
             fanout_idx      <= 0;
             ct_lookup_en    <= 0;
 
@@ -221,11 +313,19 @@ module event_router_ng #(
                         // Check for external spike
                         else if (ext_spike_valid) begin
                             ext_selected  <= 1;
+                            ext_route_group  <= ext_spike_neuron_id[GLOBAL_ID_WIDTH-1:LOCAL_ID_WIDTH];
+                            ext_route_neuron <= ext_spike_neuron_id[LOCAL_ID_WIDTH-1:0];
+                            ext_route_weight <= ext_spike_weight;
+                            ext_route_exc    <= ext_spike_exc;
                             state         <= ST_EXT_ROUTE;
                         end
-                        // Check group spikes via round-robin
-                        else begin
+                        // Check group spikes via round-robin. Stay truly idle
+                        // when there is no work so the HLS input path sees
+                        // continuous ready instead of a periodic busy pulse.
+                        else if (|grp_spike_valid) begin
                             state <= ST_ARB_SELECT;
+                        end else begin
+                            state <= ST_IDLE;
                         end
                     end
 
@@ -265,14 +365,14 @@ module event_router_ng #(
                         begin : ext_route_body
                             reg [GROUP_ID_WIDTH-1:0] tgt_grp;
                             reg [LOCAL_ID_WIDTH-1:0] tgt_neuron;
-                            tgt_grp    = ext_spike_neuron_id[GLOBAL_ID_WIDTH-1:LOCAL_ID_WIDTH];
-                            tgt_neuron = ext_spike_neuron_id[LOCAL_ID_WIDTH-1:0];
+                            tgt_grp    = ext_route_group;
+                            tgt_neuron = ext_route_neuron;
 
                             if (tgt_grp < NUM_GROUPS && grp_in_ready[tgt_grp]) begin
                                 grp_in_valid[tgt_grp] <= 1;
                                 grp_in_dest_id[tgt_grp*LOCAL_ID_WIDTH +: LOCAL_ID_WIDTH] <= tgt_neuron;
-                                grp_in_weight[tgt_grp*WEIGHT_WIDTH +: WEIGHT_WIDTH]      <= ext_spike_weight;
-                                grp_in_exc[tgt_grp]   <= ext_spike_exc;
+                                grp_in_weight[tgt_grp*WEIGHT_WIDTH +: WEIGHT_WIDTH]      <= ext_route_weight;
+                                grp_in_exc[tgt_grp]   <= ext_route_exc;
                                 spike_counter <= spike_counter + 1;
                                 state         <= ST_IDLE;
                             end else if (tgt_grp >= NUM_GROUPS) begin

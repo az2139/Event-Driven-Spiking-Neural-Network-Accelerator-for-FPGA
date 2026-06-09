@@ -1,0 +1,10 @@
+{
+  "name": "hls_inference_profile_output",
+  "type": "HLS",
+  "configuration": {
+    "componentType": "HLS",
+    "configFiles": ["..\/scripts\/snn_inference_profile_hls_vpp.cfg"],
+    "work_dir": ".",
+    "csyn_args": "--part=xc7z020clg400-2"
+  }
+}

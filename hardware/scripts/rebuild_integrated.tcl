@@ -356,6 +356,16 @@ create_bd_port -dir I cfg_fifo_overflow -type data
 create_bd_port -dir I -from 7 -to 0 cfg_active_neurons -type data
 create_bd_port -dir I -from 31 -to 0 cfg_throughput_counter -type data
 create_bd_port -dir I -from 31 -to 0 cfg_service_cycles_counter -type data
+create_bd_port -dir I cfg_router_busy -type data
+create_bd_port -dir I cfg_any_core_group_busy -type data
+create_bd_port -dir I cfg_snn_ready -type data
+create_bd_port -dir I cfg_profile_active -type data
+create_bd_port -dir I cfg_profile_done -type data
+create_bd_port -dir O cfg_profile_start -type data
+create_bd_port -dir O cfg_profile_stop -type data
+create_bd_port -dir O -from 7 -to 0 cfg_profile_index -type data
+create_bd_port -dir I -from 31 -to 0 cfg_profile_data -type data
+create_bd_port -dir I -from 31 -to 0 cfg_profile_info -type data
 
 # Connect config regs to external ports
 connect_bd_net [get_bd_pins snn_config_regs_0/router_config_we]     [get_bd_ports cfg_router_config_we]
@@ -374,6 +384,16 @@ connect_bd_net [get_bd_ports cfg_fifo_overflow]                      [get_bd_pin
 connect_bd_net [get_bd_ports cfg_active_neurons]                     [get_bd_pins snn_config_regs_0/active_neurons]
 connect_bd_net [get_bd_ports cfg_throughput_counter]                  [get_bd_pins snn_config_regs_0/throughput_counter]
 connect_bd_net [get_bd_ports cfg_service_cycles_counter]              [get_bd_pins snn_config_regs_0/service_cycles_counter]
+connect_bd_net [get_bd_ports cfg_router_busy]                         [get_bd_pins snn_config_regs_0/router_busy]
+connect_bd_net [get_bd_ports cfg_any_core_group_busy]                 [get_bd_pins snn_config_regs_0/any_core_group_busy]
+connect_bd_net [get_bd_ports cfg_snn_ready]                           [get_bd_pins snn_config_regs_0/snn_ready]
+connect_bd_net [get_bd_ports cfg_profile_active]                      [get_bd_pins snn_config_regs_0/profile_active]
+connect_bd_net [get_bd_ports cfg_profile_done]                        [get_bd_pins snn_config_regs_0/profile_done]
+connect_bd_net [get_bd_pins snn_config_regs_0/profile_start]          [get_bd_ports cfg_profile_start]
+connect_bd_net [get_bd_pins snn_config_regs_0/profile_stop]           [get_bd_ports cfg_profile_stop]
+connect_bd_net [get_bd_pins snn_config_regs_0/profile_index]          [get_bd_ports cfg_profile_index]
+connect_bd_net [get_bd_ports cfg_profile_data]                        [get_bd_pins snn_config_regs_0/profile_data]
+connect_bd_net [get_bd_ports cfg_profile_info]                        [get_bd_pins snn_config_regs_0/profile_info]
 
 # Clock/reset external ports
 # NOTE: Port name is kept as clk_100mhz for backward compatibility with

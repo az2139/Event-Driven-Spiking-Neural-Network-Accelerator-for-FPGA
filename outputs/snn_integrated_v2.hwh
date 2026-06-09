@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
-<EDKSYSTEM EDWVERSION="1.2" TIMESTAMP="Tue Jun  2 14:42:43 2026" VIVADOVERSION="2025.2">
+<EDKSYSTEM EDWVERSION="1.2" TIMESTAMP="Thu Jun  4 17:01:35 2026" VIVADOVERSION="2025.2">
 
   <SYSTEMINFO ARCH="zynq" DEVICE="7z020" NAME="design_1" PACKAGE="clg400" SPEEDGRADE="-2"/>
 
@@ -114,6 +114,11 @@
         <CONNECTION INSTANCE="snn_config_regs_0" PORT="active_neurons"/>
       </CONNECTIONS>
     </PORT>
+    <PORT DIR="I" NAME="cfg_any_core_group_busy" SIGIS="data" SIGNAME="External_Ports_cfg_any_core_group_busy">
+      <CONNECTIONS>
+        <CONNECTION INSTANCE="snn_config_regs_0" PORT="any_core_group_busy"/>
+      </CONNECTIONS>
+    </PORT>
     <PORT DIR="I" NAME="cfg_fifo_overflow" SIGIS="data" SIGNAME="External_Ports_cfg_fifo_overflow">
       <CONNECTIONS>
         <CONNECTION INSTANCE="snn_config_regs_0" PORT="fifo_overflow"/>
@@ -154,6 +159,46 @@
         <CONNECTION INSTANCE="snn_config_regs_0" PORT="neuron_spike_count"/>
       </CONNECTIONS>
     </PORT>
+    <PORT DIR="I" NAME="cfg_profile_active" SIGIS="data" SIGNAME="External_Ports_cfg_profile_active">
+      <CONNECTIONS>
+        <CONNECTION INSTANCE="snn_config_regs_0" PORT="profile_active"/>
+      </CONNECTIONS>
+    </PORT>
+    <PORT DIR="I" LEFT="31" NAME="cfg_profile_data" RIGHT="0" SIGIS="data" SIGNAME="External_Ports_cfg_profile_data">
+      <CONNECTIONS>
+        <CONNECTION INSTANCE="snn_config_regs_0" PORT="profile_data"/>
+      </CONNECTIONS>
+    </PORT>
+    <PORT DIR="I" NAME="cfg_profile_done" SIGIS="data" SIGNAME="External_Ports_cfg_profile_done">
+      <CONNECTIONS>
+        <CONNECTION INSTANCE="snn_config_regs_0" PORT="profile_done"/>
+      </CONNECTIONS>
+    </PORT>
+    <PORT DIR="O" LEFT="7" NAME="cfg_profile_index" RIGHT="0" SIGIS="data" SIGNAME="snn_config_regs_0_profile_index">
+      <CONNECTIONS>
+        <CONNECTION INSTANCE="snn_config_regs_0" PORT="profile_index"/>
+      </CONNECTIONS>
+    </PORT>
+    <PORT DIR="I" LEFT="31" NAME="cfg_profile_info" RIGHT="0" SIGIS="data" SIGNAME="External_Ports_cfg_profile_info">
+      <CONNECTIONS>
+        <CONNECTION INSTANCE="snn_config_regs_0" PORT="profile_info"/>
+      </CONNECTIONS>
+    </PORT>
+    <PORT DIR="O" NAME="cfg_profile_start" SIGIS="data" SIGNAME="snn_config_regs_0_profile_start">
+      <CONNECTIONS>
+        <CONNECTION INSTANCE="snn_config_regs_0" PORT="profile_start"/>
+      </CONNECTIONS>
+    </PORT>
+    <PORT DIR="O" NAME="cfg_profile_stop" SIGIS="data" SIGNAME="snn_config_regs_0_profile_stop">
+      <CONNECTIONS>
+        <CONNECTION INSTANCE="snn_config_regs_0" PORT="profile_stop"/>
+      </CONNECTIONS>
+    </PORT>
+    <PORT DIR="I" NAME="cfg_router_busy" SIGIS="data" SIGNAME="External_Ports_cfg_router_busy">
+      <CONNECTIONS>
+        <CONNECTION INSTANCE="snn_config_regs_0" PORT="router_busy"/>
+      </CONNECTIONS>
+    </PORT>
     <PORT DIR="O" LEFT="31" NAME="cfg_router_config_addr" RIGHT="0" SIGIS="data" SIGNAME="snn_config_regs_0_router_config_addr">
       <CONNECTIONS>
         <CONNECTION INSTANCE="snn_config_regs_0" PORT="router_config_addr"/>
@@ -182,6 +227,11 @@
     <PORT DIR="I" LEFT="31" NAME="cfg_service_cycles_counter" RIGHT="0" SIGIS="data" SIGNAME="External_Ports_cfg_service_cycles_counter">
       <CONNECTIONS>
         <CONNECTION INSTANCE="snn_config_regs_0" PORT="service_cycles_counter"/>
+      </CONNECTIONS>
+    </PORT>
+    <PORT DIR="I" NAME="cfg_snn_ready" SIGIS="data" SIGNAME="External_Ports_cfg_snn_ready">
+      <CONNECTIONS>
+        <CONNECTION INSTANCE="snn_config_regs_0" PORT="snn_ready"/>
       </CONNECTIONS>
     </PORT>
     <PORT DIR="I" LEFT="31" NAME="cfg_throughput_counter" RIGHT="0" SIGIS="data" SIGNAME="External_Ports_cfg_throughput_counter">
@@ -7061,6 +7111,11 @@
             <CONNECTION INSTANCE="External_Ports" PORT="cfg_active_neurons"/>
           </CONNECTIONS>
         </PORT>
+        <PORT DIR="I" NAME="any_core_group_busy" SIGIS="undef" SIGNAME="External_Ports_cfg_any_core_group_busy">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="External_Ports" PORT="cfg_any_core_group_busy"/>
+          </CONNECTIONS>
+        </PORT>
         <PORT DIR="I" NAME="fifo_overflow" SIGIS="undef" SIGNAME="External_Ports_cfg_fifo_overflow">
           <CONNECTIONS>
             <CONNECTION INSTANCE="External_Ports" PORT="cfg_fifo_overflow"/>
@@ -7099,6 +7154,46 @@
         <PORT DIR="I" LEFT="31" NAME="neuron_spike_count" RIGHT="0" SIGIS="undef" SIGNAME="External_Ports_cfg_neuron_spike_count">
           <CONNECTIONS>
             <CONNECTION INSTANCE="External_Ports" PORT="cfg_neuron_spike_count"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="I" NAME="profile_active" SIGIS="undef" SIGNAME="External_Ports_cfg_profile_active">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="External_Ports" PORT="cfg_profile_active"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="I" LEFT="31" NAME="profile_data" RIGHT="0" SIGIS="undef" SIGNAME="External_Ports_cfg_profile_data">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="External_Ports" PORT="cfg_profile_data"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="I" NAME="profile_done" SIGIS="undef" SIGNAME="External_Ports_cfg_profile_done">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="External_Ports" PORT="cfg_profile_done"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="O" LEFT="7" NAME="profile_index" RIGHT="0" SIGIS="undef" SIGNAME="snn_config_regs_0_profile_index">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="External_Ports" PORT="cfg_profile_index"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="I" LEFT="31" NAME="profile_info" RIGHT="0" SIGIS="undef" SIGNAME="External_Ports_cfg_profile_info">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="External_Ports" PORT="cfg_profile_info"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="O" NAME="profile_start" SIGIS="undef" SIGNAME="snn_config_regs_0_profile_start">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="External_Ports" PORT="cfg_profile_start"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="O" NAME="profile_stop" SIGIS="undef" SIGNAME="snn_config_regs_0_profile_stop">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="External_Ports" PORT="cfg_profile_stop"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="I" NAME="router_busy" SIGIS="undef" SIGNAME="External_Ports_cfg_router_busy">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="External_Ports" PORT="cfg_router_busy"/>
           </CONNECTIONS>
         </PORT>
         <PORT DIR="O" LEFT="31" NAME="router_config_addr" RIGHT="0" SIGIS="undef" SIGNAME="snn_config_regs_0_router_config_addr">
@@ -7234,6 +7329,11 @@
         <PORT DIR="I" LEFT="31" NAME="service_cycles_counter" RIGHT="0" SIGIS="undef" SIGNAME="External_Ports_cfg_service_cycles_counter">
           <CONNECTIONS>
             <CONNECTION INSTANCE="External_Ports" PORT="cfg_service_cycles_counter"/>
+          </CONNECTIONS>
+        </PORT>
+        <PORT DIR="I" NAME="snn_ready" SIGIS="undef" SIGNAME="External_Ports_cfg_snn_ready">
+          <CONNECTIONS>
+            <CONNECTION INSTANCE="External_Ports" PORT="cfg_snn_ready"/>
           </CONNECTIONS>
         </PORT>
         <PORT DIR="I" LEFT="31" NAME="throughput_counter" RIGHT="0" SIGIS="undef" SIGNAME="External_Ports_cfg_throughput_counter">

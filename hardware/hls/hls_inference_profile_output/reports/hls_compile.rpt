@@ -1,0 +1,277 @@
+
+
+================================================================
+== Synthesis Summary Report of 'snn_inference_profile_hls'
+================================================================
++ General Information: 
+    * Date:           Fri Jun  5 18:55:21 2026
+    * Version:        2025.2 (Build 6295257 on Nov 14 2025)
+    * Project:        hls_inference_profile_output
+    * Solution:       hls (Vivado IP Flow Target)
+    * Product family: zynq
+    * Target device:  xc7z020-clg400-2
+    
+
+* Performance & Resource Estimates: 
++-------------------------------------------------+------+-------------------+----------+---------+-------+----------+---------+-----------+------+------+----+-----------+-----------+-----+
+|                     Modules                     | Issue|                   | Iteration|         |  Trip |          |       Latency       |      |      |    |           |           |     |
+|                     & Loops                     | Type |   Violation Type  |  Latency | Interval| Count | Pipelined| (cycles)|    (ns)   | Slack| BRAM | DSP|     FF    |    LUT    | URAM|
++-------------------------------------------------+------+-------------------+----------+---------+-------+----------+---------+-----------+------+------+----+-----------+-----------+-----+
+|+ snn_inference_profile_hls                      |     -|                  -|         -|   131076|      -|        no|   131075|  1.311e+06|  1.65|     -|   -|  897 (~0%)|  1624 (3%)|    -|
+| + snn_inference_profile_hls_Pipeline_TIME_LOOP  |     -|                  -|         -|        -|      -|       yes|   131072|  1.311e+06|  3.16|     -|   -|   60 (~0%)|  331 (~0%)|    -|
+|  o TIME_LOOP                                    |    II|  Memory Dependency|         3|        2|  65535|       yes|   131070|  1.311e+06|  7.30|     -|   -|          -|          -|    -|
++-------------------------------------------------+------+-------------------+----------+---------+-------+----------+---------+-----------+------+------+----+-----------+-----------+-----+
+    II Violation Information: docs.amd.com/access/sources/dita/topic?Doc_Version=2025.2%20English&url=ug1448-hls-guidance&resourceid=200-880.html
+    Name Prefix: '+' for module, 'o' for loop, '*' for dataflow
+
+
+================================================================
+== HW Interfaces
+================================================================
+* S_AXILITE Interfaces
++------------+------------+---------------+--------+----------+
+| Interface  | Data Width | Address Width | Offset | Register |
++------------+------------+---------------+--------+----------+
+| s_axi_ctrl | 32         | 8             | 16     | 0        |
++------------+------------+---------------+--------+----------+
+
+* S_AXILITE Registers
++------------+----------------------+--------+-------+--------+-----------------------------------+----------------------------------------------------------------------+
+| Interface  | Register             | Offset | Width | Access | Description                       | Bit Fields                                                           |
++------------+----------------------+--------+-------+--------+-----------------------------------+----------------------------------------------------------------------+
+| s_axi_ctrl | CTRL                 | 0x00   | 32    | RW     | Control signals                   | 0=AP_START 1=AP_DONE 2=AP_IDLE 3=AP_READY 7=AUTO_RESTART 9=INTERRUPT |
+| s_axi_ctrl | GIER                 | 0x04   | 32    | RW     | Global Interrupt Enable Register  | 0=Enable                                                             |
+| s_axi_ctrl | IP_IER               | 0x08   | 32    | RW     | IP Interrupt Enable Register      | 0=CHAN0_INT_EN 1=CHAN1_INT_EN                                        |
+| s_axi_ctrl | IP_ISR               | 0x0c   | 32    | RW     | IP Interrupt Status Register      | 0=CHAN0_INT_ST 1=CHAN1_INT_ST                                        |
+| s_axi_ctrl | ctrl_reg             | 0x10   | 32    | W      | Data signal of ctrl_reg           |                                                                      |
+| s_axi_ctrl | config_reg           | 0x18   | 32    | W      | Data signal of config_reg         |                                                                      |
+| s_axi_ctrl | mode_reg             | 0x20   | 32    | W      | Data signal of mode_reg           |                                                                      |
+| s_axi_ctrl | time_steps_reg       | 0x28   | 32    | W      | Data signal of time_steps_reg     |                                                                      |
+| s_axi_ctrl | learning_params_1    | 0x30   | 32    | W      | Data signal of learning_params    |                                                                      |
+| s_axi_ctrl | learning_params_2    | 0x34   | 32    | W      | Data signal of learning_params    |                                                                      |
+| s_axi_ctrl | learning_params_3    | 0x38   | 32    | W      | Data signal of learning_params    |                                                                      |
+| s_axi_ctrl | learning_params_4    | 0x3c   | 32    | W      | Data signal of learning_params    |                                                                      |
+| s_axi_ctrl | learning_params_5    | 0x40   | 32    | W      | Data signal of learning_params    |                                                                      |
+| s_axi_ctrl | encoder_config_1     | 0x48   | 32    | W      | Data signal of encoder_config     |                                                                      |
+| s_axi_ctrl | encoder_config_2     | 0x4c   | 32    | W      | Data signal of encoder_config     |                                                                      |
+| s_axi_ctrl | encoder_config_3     | 0x50   | 32    | W      | Data signal of encoder_config     |                                                                      |
+| s_axi_ctrl | status_reg           | 0x58   | 32    | R      | Data signal of status_reg         |                                                                      |
+| s_axi_ctrl | status_reg_ctrl      | 0x5c   | 32    | R      | Control signal of status_reg      | 0=status_reg_ap_vld                                                  |
+| s_axi_ctrl | spike_count_reg      | 0x68   | 32    | R      | Data signal of spike_count_reg    |                                                                      |
+| s_axi_ctrl | spike_count_reg_ctrl | 0x6c   | 32    | R      | Control signal of spike_count_reg | 0=spike_count_reg_ap_vld                                             |
+| s_axi_ctrl | weight_sum_reg       | 0x78   | 32    | R      | Data signal of weight_sum_reg     |                                                                      |
+| s_axi_ctrl | weight_sum_reg_ctrl  | 0x7c   | 32    | R      | Control signal of weight_sum_reg  | 0=weight_sum_reg_ap_vld                                              |
+| s_axi_ctrl | version_reg          | 0x88   | 32    | R      | Data signal of version_reg        |                                                                      |
+| s_axi_ctrl | version_reg_ctrl     | 0x8c   | 32    | R      | Control signal of version_reg     | 0=version_reg_ap_vld                                                 |
+| s_axi_ctrl | reward_signal        | 0x98   | 32    | W      | Data signal of reward_signal      |                                                                      |
++------------+----------------------+--------+-------+--------+-----------------------------------+----------------------------------------------------------------------+
+
+* AXIS
++---------------+-----------+---------------+-------+-------+-----+-------+-------+--------+-------+-------+--------+
+| Interface     | Direction | Register Mode | TDATA | TDEST | TID | TKEEP | TLAST | TREADY | TSTRB | TUSER | TVALID |
++---------------+-----------+---------------+-------+-------+-----+-------+-------+--------+-------+-------+--------+
+| m_axis_spikes | out       | both          | 32    | 1     | 1   | 4     | 1     | 1      | 4     | 1     | 1      |
+| s_axis_spikes | in        | both          | 32    | 1     | 1   | 4     | 1     | 1      | 4     | 1     | 1      |
++---------------+-----------+---------------+-------+-------+-----+-------+-------+--------+-------+-------+--------+
+
+* Other Ports
++---------------------+---------+-----------+----------+
+| Port                | Mode    | Direction | Bitwidth |
++---------------------+---------+-----------+----------+
+| leak_rate_out       | ap_none | out       | 16       |
+| snn_busy            | ap_none | in        | 1        |
+| snn_enable          | ap_none | out       | 1        |
+| snn_ready           | ap_none | in        | 1        |
+| snn_reset           | ap_none | out       | 1        |
+| spike_in_neuron_id  | ap_none | out       | 11       |
+| spike_in_ready      | ap_none | in        | 1        |
+| spike_in_valid      | ap_none | out       | 1        |
+| spike_in_weight     | ap_none | out       | 8        |
+| spike_out_neuron_id | ap_none | in        | 11       |
+| spike_out_ready     | ap_none | out       | 1        |
+| spike_out_valid     | ap_none | in        | 1        |
+| spike_out_weight    | ap_none | in        | 8        |
+| threshold_out       | ap_none | out       | 16       |
++---------------------+---------+-----------+----------+
+
+* TOP LEVEL CONTROL
++-----------+------------+-----------+
+| Interface | Type       | Ports     |
++-----------+------------+-----------+
+| ap_clk    | clock      | ap_clk    |
+| ap_rst_n  | reset      | ap_rst_n  |
+| interrupt | interrupt  | interrupt |
+| ap_ctrl   | ap_ctrl_hs |           |
++-----------+------------+-----------+
+
+
+================================================================
+== SW I/O Information
+================================================================
+* Top Function Arguments
++---------------------+-----------+------------------------------------------------------------------------------+
+| Argument            | Direction | Datatype                                                                     |
++---------------------+-----------+------------------------------------------------------------------------------+
+| ctrl_reg            | in        | ap_uint<32>                                                                  |
+| config_reg          | in        | ap_uint<32>                                                                  |
+| mode_reg            | in        | ap_uint<32>                                                                  |
+| time_steps_reg      | in        | ap_uint<32>                                                                  |
+| learning_params     | in        | learning_params_t                                                            |
+| encoder_config      | in        | encoder_config_t                                                             |
+| status_reg          | out       | ap_uint<32>&                                                                 |
+| spike_count_reg     | out       | ap_uint<32>&                                                                 |
+| weight_sum_reg      | out       | ap_uint<32>&                                                                 |
+| version_reg         | out       | ap_uint<32>&                                                                 |
+| s_axis_spikes       | in        | stream<hls::axis<ap_uint<32>, 1UL, 1UL, 1UL, (unsigned char)'8', false>, 0>& |
+| m_axis_spikes       | out       | stream<hls::axis<ap_uint<32>, 1UL, 1UL, 1UL, (unsigned char)'8', false>, 0>& |
+| reward_signal       | in        | ap_int<8>                                                                    |
+| spike_in_valid      | out       | ap_uint<1>&                                                                  |
+| spike_in_neuron_id  | out       | ap_uint<11>&                                                                 |
+| spike_in_weight     | out       | ap_int<8>&                                                                   |
+| spike_in_ready      | in        | ap_uint<1>                                                                   |
+| spike_out_valid     | in        | ap_uint<1>                                                                   |
+| spike_out_neuron_id | in        | ap_uint<11>                                                                  |
+| spike_out_weight    | in        | ap_int<8>                                                                    |
+| spike_out_ready     | out       | ap_uint<1>&                                                                  |
+| snn_enable          | out       | ap_uint<1>&                                                                  |
+| snn_reset           | out       | ap_uint<1>&                                                                  |
+| threshold_out       | out       | ap_uint<16>&                                                                 |
+| leak_rate_out       | out       | ap_uint<16>&                                                                 |
+| snn_ready           | in        | ap_uint<1>                                                                   |
+| snn_busy            | in        | ap_uint<1>                                                                   |
++---------------------+-----------+------------------------------------------------------------------------------+
+
+* SW-to-HW Mapping
++---------------------+---------------------+-----------+------------------------------------------------+
+| Argument            | HW Interface        | HW Type   | HW Info                                        |
++---------------------+---------------------+-----------+------------------------------------------------+
+| ctrl_reg            | s_axi_ctrl          | register  | name=ctrl_reg offset=0x10 range=32             |
+| config_reg          | s_axi_ctrl          | register  | name=config_reg offset=0x18 range=32           |
+| mode_reg            | s_axi_ctrl          | register  | name=mode_reg offset=0x20 range=32             |
+| time_steps_reg      | s_axi_ctrl          | register  | name=time_steps_reg offset=0x28 range=32       |
+| learning_params     | s_axi_ctrl          | register  | name=learning_params_1 offset=0x30 range=32    |
+| learning_params     | s_axi_ctrl          | register  | name=learning_params_2 offset=0x34 range=32    |
+| learning_params     | s_axi_ctrl          | register  | name=learning_params_3 offset=0x38 range=32    |
+| learning_params     | s_axi_ctrl          | register  | name=learning_params_4 offset=0x3c range=32    |
+| learning_params     | s_axi_ctrl          | register  | name=learning_params_5 offset=0x40 range=32    |
+| encoder_config      | s_axi_ctrl          | register  | name=encoder_config_1 offset=0x48 range=32     |
+| encoder_config      | s_axi_ctrl          | register  | name=encoder_config_2 offset=0x4c range=32     |
+| encoder_config      | s_axi_ctrl          | register  | name=encoder_config_3 offset=0x50 range=32     |
+| status_reg          | s_axi_ctrl          | register  | name=status_reg offset=0x58 range=32           |
+| status_reg          | s_axi_ctrl          | register  | name=status_reg_ctrl offset=0x5c range=32      |
+| spike_count_reg     | s_axi_ctrl          | register  | name=spike_count_reg offset=0x68 range=32      |
+| spike_count_reg     | s_axi_ctrl          | register  | name=spike_count_reg_ctrl offset=0x6c range=32 |
+| weight_sum_reg      | s_axi_ctrl          | register  | name=weight_sum_reg offset=0x78 range=32       |
+| weight_sum_reg      | s_axi_ctrl          | register  | name=weight_sum_reg_ctrl offset=0x7c range=32  |
+| version_reg         | s_axi_ctrl          | register  | name=version_reg offset=0x88 range=32          |
+| version_reg         | s_axi_ctrl          | register  | name=version_reg_ctrl offset=0x8c range=32     |
+| s_axis_spikes       | s_axis_spikes       | interface |                                                |
+| m_axis_spikes       | m_axis_spikes       | interface |                                                |
+| reward_signal       | s_axi_ctrl          | register  | name=reward_signal offset=0x98 range=32        |
+| spike_in_valid      | spike_in_valid      | port      |                                                |
+| spike_in_neuron_id  | spike_in_neuron_id  | port      |                                                |
+| spike_in_weight     | spike_in_weight     | port      |                                                |
+| spike_in_ready      | spike_in_ready      | port      |                                                |
+| spike_out_valid     | spike_out_valid     | port      |                                                |
+| spike_out_neuron_id | spike_out_neuron_id | port      |                                                |
+| spike_out_weight    | spike_out_weight    | port      |                                                |
+| spike_out_ready     | spike_out_ready     | port      |                                                |
+| snn_enable          | snn_enable          | port      |                                                |
+| snn_reset           | snn_reset           | port      |                                                |
+| threshold_out       | threshold_out       | port      |                                                |
+| leak_rate_out       | leak_rate_out       | port      |                                                |
+| snn_ready           | snn_ready           | port      |                                                |
+| snn_busy            | snn_busy            | port      |                                                |
++---------------------+---------------------+-----------+------------------------------------------------+
+
+
+================================================================
+== Bind Op Report
+================================================================
++-------------------------------------------------+-----+--------+--------------+--------+----------+---------+
+| Name                                            | DSP | Pragma | Variable     | Op     | Impl     | Latency |
++-------------------------------------------------+-----+--------+--------------+--------+----------+---------+
+| + snn_inference_profile_hls                     | 0   |        |              |        |          |         |
+|   icmp_ln87_fu_455_p2                           |     |        | icmp_ln87    | seteq  | auto     | 0       |
+|   time_steps_1_fu_465_p3                        |     |        | time_steps_1 | select | auto_sel | 0       |
+|   xor_ln129_fu_565_p2                           |     |        | xor_ln129    | xor    | auto     | 0       |
+|   xor_ln129_1_fu_570_p2                         |     |        | xor_ln129_1  | xor    | auto     | 0       |
+|   or_ln129_fu_575_p2                            |     |        | or_ln129     | or     | auto     | 0       |
+|   xor_ln143_fu_582_p2                           |     |        | xor_ln143    | xor    | auto     | 0       |
+|   or_ln143_fu_587_p2                            |     |        | or_ln143     | or     | auto     | 0       |
+|   xor_ln161_fu_594_p2                           |     |        | xor_ln161    | xor    | auto     | 0       |
+|   or_ln161_fu_599_p2                            |     |        | or_ln161     | or     | auto     | 0       |
+|   icmp_ln122_fu_606_p2                          |     |        | icmp_ln122   | seteq  | auto     | 0       |
+|  + snn_inference_profile_hls_Pipeline_TIME_LOOP | 0   |        |              |        |          |         |
+|    icmp_ln122_fu_407_p2                         |     |        | icmp_ln122   | seteq  | auto     | 0       |
+|    t_2_fu_413_p2                                |     |        | t_2          | add    | fabric   | 0       |
+|    xor_ln134_fu_459_p2                          |     |        | xor_ln134    | xor    | auto     | 0       |
+|    add_ln138_fu_423_p2                          |     |        | add_ln138    | add    | fabric   | 0       |
+|    xor_ln192_fu_570_p2                          |     |        | xor_ln192    | xor    | auto     | 0       |
+|    add_ln198_fu_592_p2                          |     |        | add_ln198    | add    | fabric   | 0       |
++-------------------------------------------------+-----+--------+--------------+--------+----------+---------+
+
+
+================================================================
+== Storage Report
+================================================================
++-----------------------------+-----------+-----------+------+------+--------+----------+------+---------+------------------+
+| Name                        | Usage     | Type      | BRAM | URAM | Pragma | Variable | Impl | Latency | Bitwidth, Depth, |
+|                             |           |           |      |      |        |          |      |         | Banks            |
++-----------------------------+-----------+-----------+------+------+--------+----------+------+---------+------------------+
+| + snn_inference_profile_hls |           |           | 0    | 0    |        |          |      |         |                  |
+|   ctrl_s_axi_U              | interface | s_axilite |      |      |        |          |      |         |                  |
++-----------------------------+-----------+-----------+------+------+--------+----------+------+---------+------------------+
+
+
+================================================================
+== Pragma Report
+================================================================
+* Inferred Pragmas
++----------+---------+--------------------------------------------------------------------------------------------------------------------------------+-------------------------------+
+| Type     | Options | Location                                                                                                                       | Inferred From                 |
++----------+---------+--------------------------------------------------------------------------------------------------------------------------------+-------------------------------+
+| PIPELINE |         | loop TIME_LOOP (src/snn_inference_profile_hls.cpp:122:16) in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:122) | syn.compile.pipeline_loops=64 |
++----------+---------+--------------------------------------------------------------------------------------------------------------------------------+-------------------------------+
+
+* Valid Pragma Syntax
++--------------+--------------------------------------------+----------------------------------------------------------------------+
+| Type         | Options                                    | Location                                                             |
++--------------+--------------------------------------------+----------------------------------------------------------------------+
+| INLINE       |                                            | in find_neuron_group (include/snn_top_hls.h:368)                     |
+| UNROLL       |                                            | in find_neuron_group (include/snn_top_hls.h:370)                     |
+| INLINE       |                                            | in find_connection (include/snn_top_hls.h:381)                       |
+| UNROLL       |                                            | in find_connection (include/snn_top_hls.h:383)                       |
+| INLINE       |                                            | in weight_index (include/snn_top_hls.h:395)                          |
+| INTERFACE    | s_axilite port=ctrl_reg bundle=ctrl        | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:42)  |
+| INTERFACE    | s_axilite port=config_reg bundle=ctrl      | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:43)  |
+| INTERFACE    | s_axilite port=mode_reg bundle=ctrl        | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:44)  |
+| INTERFACE    | s_axilite port=time_steps_reg bundle=ctrl  | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:45)  |
+| INTERFACE    | s_axilite port=learning_params bundle=ctrl | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:46)  |
+| INTERFACE    | s_axilite port=encoder_config bundle=ctrl  | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:47)  |
+| INTERFACE    | s_axilite port=status_reg bundle=ctrl      | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:48)  |
+| INTERFACE    | s_axilite port=spike_count_reg bundle=ctrl | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:49)  |
+| INTERFACE    | s_axilite port=weight_sum_reg bundle=ctrl  | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:50)  |
+| INTERFACE    | s_axilite port=version_reg bundle=ctrl     | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:51)  |
+| INTERFACE    | s_axilite port=reward_signal bundle=ctrl   | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:52)  |
+| INTERFACE    | s_axilite port=return bundle=ctrl          | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:53)  |
+| INTERFACE    | axis port=s_axis_spikes                    | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:55)  |
+| INTERFACE    | axis port=m_axis_spikes                    | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:56)  |
+| INTERFACE    | ap_none port=spike_in_valid                | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:58)  |
+| INTERFACE    | ap_none port=spike_in_neuron_id            | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:59)  |
+| INTERFACE    | ap_none port=spike_in_weight               | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:60)  |
+| INTERFACE    | ap_none port=spike_in_ready                | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:61)  |
+| INTERFACE    | ap_none port=spike_out_valid               | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:62)  |
+| INTERFACE    | ap_none port=spike_out_neuron_id           | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:63)  |
+| INTERFACE    | ap_none port=spike_out_weight              | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:64)  |
+| INTERFACE    | ap_none port=spike_out_ready               | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:65)  |
+| INTERFACE    | ap_none port=snn_enable                    | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:66)  |
+| INTERFACE    | ap_none port=snn_reset                     | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:67)  |
+| INTERFACE    | ap_none port=threshold_out                 | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:68)  |
+| INTERFACE    | ap_none port=leak_rate_out                 | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:69)  |
+| INTERFACE    | ap_none port=snn_ready                     | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:70)  |
+| INTERFACE    | ap_none port=snn_busy                      | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:71)  |
+| LOOP_FLATTEN | off                                        | in snn_inference_profile_hls (src/snn_inference_profile_hls.cpp:123) |
++--------------+--------------------------------------------+----------------------------------------------------------------------+
+
+

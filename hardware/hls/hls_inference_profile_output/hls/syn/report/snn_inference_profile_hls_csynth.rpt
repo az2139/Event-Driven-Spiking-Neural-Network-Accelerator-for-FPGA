@@ -1,0 +1,244 @@
+
+
+================================================================
+== Vitis HLS Report for 'snn_inference_profile_hls'
+================================================================
+* Date:           Fri Jun  5 18:55:21 2026
+
+* Version:        2025.2 (Build 6295257 on Nov 14 2025)
+* Project:        hls_inference_profile_output
+* Solution:       hls (Vivado IP Flow Target)
+* Product family: zynq
+* Target device:  xc7z020-clg400-2
+
+
+================================================================
+== Performance Estimates
+================================================================
++ Timing: 
+    * Summary: 
+    +--------+----------+----------+------------+
+    |  Clock |  Target  | Estimated| Uncertainty|
+    +--------+----------+----------+------------+
+    |ap_clk  |  10.00 ns|  5.653 ns|     2.70 ns|
+    +--------+----------+----------+------------+
+
++ Latency: 
+    * Summary: 
+    +---------+---------+-----------+----------+-----+--------+---------+
+    |  Latency (cycles) |  Latency (absolute)  |   Interval   | Pipeline|
+    |   min   |   max   |    min    |    max   | min |   max  |   Type  |
+    +---------+---------+-----------+----------+-----+--------+---------+
+    |        5|   131075|  50.000 ns|  1.311 ms|    6|  131076|       no|
+    +---------+---------+-----------+----------+-----+--------+---------+
+
+    + Detail: 
+        * Instance: 
+        +---------------------------------------------------------+----------------------------------------------+---------+---------+-----------+----------+-----+-----+-------------------+
+        |                                                         |                                              |  Latency (cycles) |  Latency (absolute)  |  Interval |      Pipeline     |
+        |                         Instance                        |                    Module                    |   min   |   max   |    min    |    max   | min | max |        Type       |
+        +---------------------------------------------------------+----------------------------------------------+---------+---------+-----------+----------+-----+-----+-------------------+
+        |grp_snn_inference_profile_hls_Pipeline_TIME_LOOP_fu_364  |snn_inference_profile_hls_Pipeline_TIME_LOOP  |        2|   131072|  20.000 ns|  1.311 ms|    0|    0|  loop pipeline stp|
+        +---------------------------------------------------------+----------------------------------------------+---------+---------+-----------+----------+-----+-----+-------------------+
+
+        * Loop: 
+        N/A
+
+
+
+================================================================
+== Utilization Estimates
+================================================================
+* Summary: 
++-----------------+---------+-----+--------+-------+-----+
+|       Name      | BRAM_18K| DSP |   FF   |  LUT  | URAM|
++-----------------+---------+-----+--------+-------+-----+
+|DSP              |        -|    -|       -|      -|    -|
+|Expression       |        -|    -|       0|     76|    -|
+|FIFO             |        -|    -|       -|      -|    -|
+|Instance         |        0|    -|     650|   1347|    -|
+|Memory           |        -|    -|       -|      -|    -|
+|Multiplexer      |        -|    -|       0|    201|    -|
+|Register         |        -|    -|     247|      -|    -|
++-----------------+---------+-----+--------+-------+-----+
+|Total            |        0|    0|     897|   1624|    0|
++-----------------+---------+-----+--------+-------+-----+
+|Available        |      280|  220|  106400|  53200|    0|
++-----------------+---------+-----+--------+-------+-----+
+|Utilization (%)  |        0|    0|      ~0|      3|    0|
++-----------------+---------+-----+--------+-------+-----+
+
++ Detail: 
+    * Instance: 
+    +---------------------------------------------------------+----------------------------------------------+---------+----+-----+------+-----+
+    |                         Instance                        |                    Module                    | BRAM_18K| DSP|  FF |  LUT | URAM|
+    +---------------------------------------------------------+----------------------------------------------+---------+----+-----+------+-----+
+    |ctrl_s_axi_U                                             |ctrl_s_axi                                    |        0|   0|  590|  1016|    0|
+    |grp_snn_inference_profile_hls_Pipeline_TIME_LOOP_fu_364  |snn_inference_profile_hls_Pipeline_TIME_LOOP  |        0|   0|   60|   331|    0|
+    +---------------------------------------------------------+----------------------------------------------+---------+----+-----+------+-----+
+    |Total                                                    |                                              |        0|   0|  650|  1347|    0|
+    +---------------------------------------------------------+----------------------------------------------+---------+----+-----+------+-----+
+
+    * DSP: 
+    N/A
+
+    * Memory: 
+    N/A
+
+    * FIFO: 
+    N/A
+
+    * Expression: 
+    +------------------------------------------------------------------------------+----------+----+---+----+------------+------------+
+    |                                 Variable Name                                | Operation| DSP| FF| LUT| Bitwidth P0| Bitwidth P1|
+    +------------------------------------------------------------------------------+----------+----+---+----+------------+------------+
+    |grp_snn_inference_profile_hls_Pipeline_TIME_LOOP_fu_364_m_axis_spikes_TREADY  |       and|   0|  0|   1|           1|           1|
+    |icmp_ln122_fu_606_p2                                                          |      icmp|   0|  0|  16|          16|           1|
+    |icmp_ln87_fu_455_p2                                                           |      icmp|   0|  0|  32|          32|           1|
+    |or_ln129_fu_575_p2                                                            |        or|   0|  0|   1|           1|           1|
+    |or_ln143_fu_587_p2                                                            |        or|   0|  0|   1|           1|           1|
+    |or_ln161_fu_599_p2                                                            |        or|   0|  0|   1|           1|           1|
+    |time_steps_1_fu_465_p3                                                        |    select|   0|  0|  16|           1|           1|
+    |xor_ln129_1_fu_570_p2                                                         |       xor|   0|  0|   2|           1|           2|
+    |xor_ln129_fu_565_p2                                                           |       xor|   0|  0|   2|           1|           2|
+    |xor_ln143_fu_582_p2                                                           |       xor|   0|  0|   2|           1|           2|
+    |xor_ln161_fu_594_p2                                                           |       xor|   0|  0|   2|           1|           2|
+    +------------------------------------------------------------------------------+----------+----+---+----+------------+------------+
+    |Total                                                                         |          |   0|  0|  76|          57|          15|
+    +------------------------------------------------------------------------------+----------+----+---+----+------------+------------+
+
+    * Multiplexer: 
+    +-----------------------------------+----+-----------+-----+-----------+
+    |                Name               | LUT| Input Size| Bits| Total Bits|
+    +-----------------------------------+----+-----------+-----+-----------+
+    |ap_NS_fsm                          |  21|          5|    1|          5|
+    |first_spike_pending                |   9|          2|    1|          2|
+    |first_spike_pending_id             |   9|          2|   11|         22|
+    |first_spike_pending_weight         |   9|          2|    8|         16|
+    |first_spike_sent                   |   9|          2|    1|          2|
+    |leak_rate_out                      |   9|          2|   16|         32|
+    |m_axis_spikes_TDATA_int_regslice   |   9|          2|   32|         64|
+    |m_axis_spikes_TDEST_int_regslice   |   9|          2|    1|          2|
+    |m_axis_spikes_TID_int_regslice     |   9|          2|    1|          2|
+    |m_axis_spikes_TKEEP_int_regslice   |   9|          2|    4|          8|
+    |m_axis_spikes_TLAST_int_regslice   |   9|          2|    1|          2|
+    |m_axis_spikes_TSTRB_int_regslice   |   9|          2|    4|          8|
+    |m_axis_spikes_TUSER_int_regslice   |   9|          2|    1|          2|
+    |s_axis_spikes_TREADY_int_regslice  |   9|          2|    1|          2|
+    |snn_enable                         |   9|          2|    1|          2|
+    |snn_reset                          |   9|          2|    1|          2|
+    |spike_counter                      |   9|          2|   32|         64|
+    |spike_in_valid_toggle              |   9|          2|    1|          2|
+    |spike_out_ack_toggle               |   9|          2|    1|          2|
+    |threshold_out                      |   9|          2|   16|         32|
+    |timestamp                          |   9|          2|   32|         64|
+    +-----------------------------------+----+-----------+-----+-----------+
+    |Total                              | 201|         45|  167|        337|
+    +-----------------------------------+----+-----------+-----+-----------+
+
+    * Register: 
+    +----------------------------------------------------------------------+----+----+-----+-----------+
+    |                                 Name                                 | FF | LUT| Bits| Const Bits|
+    +----------------------------------------------------------------------+----+----+-----+-----------+
+    |ap_CS_fsm                                                             |   4|   0|    4|          0|
+    |enable_reg_737                                                        |   1|   0|    1|          0|
+    |first_spike_only_reg_749                                              |   1|   0|    1|          0|
+    |first_spike_pending                                                   |   1|   0|    1|          0|
+    |first_spike_pending_id                                                |  11|   0|   11|          0|
+    |first_spike_pending_weight                                            |   8|   0|    8|          0|
+    |first_spike_sent                                                      |   1|   0|    1|          0|
+    |grp_snn_inference_profile_hls_Pipeline_TIME_LOOP_fu_364_ap_start_reg  |   1|   0|    1|          0|
+    |icmp_ln122_reg_777                                                    |   1|   0|    1|          0|
+    |leak_rate_out_preg                                                    |  16|   0|   16|          0|
+    |m_axis_spikes_TDATA_reg                                               |  32|   0|   32|          0|
+    |m_axis_spikes_TDEST_reg                                               |   1|   0|    1|          0|
+    |m_axis_spikes_TID_reg                                                 |   1|   0|    1|          0|
+    |m_axis_spikes_TKEEP_reg                                               |   4|   0|    4|          0|
+    |m_axis_spikes_TLAST_reg                                               |   1|   0|    1|          0|
+    |m_axis_spikes_TSTRB_reg                                               |   4|   0|    4|          0|
+    |m_axis_spikes_TUSER_reg                                               |   1|   0|    1|          0|
+    |mode_reg_read_reg_708                                                 |  32|   0|   32|          0|
+    |or_ln129_reg_762                                                      |   1|   0|    1|          0|
+    |or_ln143_reg_767                                                      |   1|   0|    1|          0|
+    |or_ln161_reg_772                                                      |   1|   0|    1|          0|
+    |snn_busy_read_reg_677                                                 |   1|   0|    1|          0|
+    |snn_enable_preg                                                       |   1|   0|    1|          0|
+    |snn_ready_read_reg_682                                                |   1|   0|    1|          0|
+    |snn_reset_preg                                                        |   1|   0|    1|          0|
+    |spike_counter                                                         |  32|   0|   32|          0|
+    |spike_in_ready_read_reg_703                                           |   1|   0|    1|          0|
+    |spike_in_valid_toggle                                                 |   1|   0|    1|          0|
+    |spike_out_ack_toggle                                                  |   1|   0|    1|          0|
+    |spike_out_neuron_id_read_reg_692                                      |  11|   0|   11|          0|
+    |spike_out_valid_read_reg_698                                          |   1|   0|    1|          0|
+    |spike_out_weight_read_reg_687                                         |   8|   0|    8|          0|
+    |threshold_out_preg                                                    |  16|   0|   16|          0|
+    |time_steps_1_reg_756                                                  |  16|   0|   16|          0|
+    |timestamp                                                             |  32|   0|   32|          0|
+    +----------------------------------------------------------------------+----+----+-----+-----------+
+    |Total                                                                 | 247|   0|  247|          0|
+    +----------------------------------------------------------------------+----+----+-----+-----------+
+
+
+
+================================================================
+== Interface
+================================================================
+* Summary: 
++----------------------+-----+-----+------------+---------------------------+--------------+
+|       RTL Ports      | Dir | Bits|  Protocol  |       Source Object       |    C Type    |
++----------------------+-----+-----+------------+---------------------------+--------------+
+|s_axi_ctrl_AWVALID    |   in|    1|       s_axi|                       ctrl|        scalar|
+|s_axi_ctrl_AWREADY    |  out|    1|       s_axi|                       ctrl|        scalar|
+|s_axi_ctrl_AWADDR     |   in|    8|       s_axi|                       ctrl|        scalar|
+|s_axi_ctrl_WVALID     |   in|    1|       s_axi|                       ctrl|        scalar|
+|s_axi_ctrl_WREADY     |  out|    1|       s_axi|                       ctrl|        scalar|
+|s_axi_ctrl_WDATA      |   in|   32|       s_axi|                       ctrl|        scalar|
+|s_axi_ctrl_WSTRB      |   in|    4|       s_axi|                       ctrl|        scalar|
+|s_axi_ctrl_ARVALID    |   in|    1|       s_axi|                       ctrl|        scalar|
+|s_axi_ctrl_ARREADY    |  out|    1|       s_axi|                       ctrl|        scalar|
+|s_axi_ctrl_ARADDR     |   in|    8|       s_axi|                       ctrl|        scalar|
+|s_axi_ctrl_RVALID     |  out|    1|       s_axi|                       ctrl|        scalar|
+|s_axi_ctrl_RREADY     |   in|    1|       s_axi|                       ctrl|        scalar|
+|s_axi_ctrl_RDATA      |  out|   32|       s_axi|                       ctrl|        scalar|
+|s_axi_ctrl_RRESP      |  out|    2|       s_axi|                       ctrl|        scalar|
+|s_axi_ctrl_BVALID     |  out|    1|       s_axi|                       ctrl|        scalar|
+|s_axi_ctrl_BREADY     |   in|    1|       s_axi|                       ctrl|        scalar|
+|s_axi_ctrl_BRESP      |  out|    2|       s_axi|                       ctrl|        scalar|
+|ap_clk                |   in|    1|  ap_ctrl_hs|  snn_inference_profile_hls|  return value|
+|ap_rst_n              |   in|    1|  ap_ctrl_hs|  snn_inference_profile_hls|  return value|
+|interrupt             |  out|    1|  ap_ctrl_hs|  snn_inference_profile_hls|  return value|
+|s_axis_spikes_TDATA   |   in|   32|        axis|     s_axis_spikes_V_data_V|       pointer|
+|s_axis_spikes_TVALID  |   in|    1|        axis|     s_axis_spikes_V_dest_V|       pointer|
+|s_axis_spikes_TREADY  |  out|    1|        axis|     s_axis_spikes_V_dest_V|       pointer|
+|s_axis_spikes_TDEST   |   in|    1|        axis|     s_axis_spikes_V_dest_V|       pointer|
+|s_axis_spikes_TKEEP   |   in|    4|        axis|     s_axis_spikes_V_keep_V|       pointer|
+|s_axis_spikes_TSTRB   |   in|    4|        axis|     s_axis_spikes_V_strb_V|       pointer|
+|s_axis_spikes_TUSER   |   in|    1|        axis|     s_axis_spikes_V_user_V|       pointer|
+|s_axis_spikes_TLAST   |   in|    1|        axis|     s_axis_spikes_V_last_V|       pointer|
+|s_axis_spikes_TID     |   in|    1|        axis|       s_axis_spikes_V_id_V|       pointer|
+|m_axis_spikes_TDATA   |  out|   32|        axis|     m_axis_spikes_V_data_V|       pointer|
+|m_axis_spikes_TVALID  |  out|    1|        axis|     m_axis_spikes_V_dest_V|       pointer|
+|m_axis_spikes_TREADY  |   in|    1|        axis|     m_axis_spikes_V_dest_V|       pointer|
+|m_axis_spikes_TDEST   |  out|    1|        axis|     m_axis_spikes_V_dest_V|       pointer|
+|m_axis_spikes_TKEEP   |  out|    4|        axis|     m_axis_spikes_V_keep_V|       pointer|
+|m_axis_spikes_TSTRB   |  out|    4|        axis|     m_axis_spikes_V_strb_V|       pointer|
+|m_axis_spikes_TUSER   |  out|    1|        axis|     m_axis_spikes_V_user_V|       pointer|
+|m_axis_spikes_TLAST   |  out|    1|        axis|     m_axis_spikes_V_last_V|       pointer|
+|m_axis_spikes_TID     |  out|    1|        axis|       m_axis_spikes_V_id_V|       pointer|
+|spike_in_valid        |  out|    1|     ap_none|             spike_in_valid|       pointer|
+|spike_in_neuron_id    |  out|   11|     ap_none|         spike_in_neuron_id|       pointer|
+|spike_in_weight       |  out|    8|     ap_none|            spike_in_weight|       pointer|
+|spike_in_ready        |   in|    1|     ap_none|             spike_in_ready|        scalar|
+|spike_out_valid       |   in|    1|     ap_none|            spike_out_valid|        scalar|
+|spike_out_neuron_id   |   in|   11|     ap_none|        spike_out_neuron_id|        scalar|
+|spike_out_weight      |   in|    8|     ap_none|           spike_out_weight|        scalar|
+|spike_out_ready       |  out|    1|     ap_none|            spike_out_ready|       pointer|
+|snn_enable            |  out|    1|     ap_none|                 snn_enable|       pointer|
+|snn_reset             |  out|    1|     ap_none|                  snn_reset|       pointer|
+|threshold_out         |  out|   16|     ap_none|              threshold_out|       pointer|
+|leak_rate_out         |  out|   16|     ap_none|              leak_rate_out|       pointer|
+|snn_ready             |   in|    1|     ap_none|                  snn_ready|        scalar|
+|snn_busy              |   in|    1|     ap_none|                   snn_busy|        scalar|
++----------------------+-----+-----+------------+---------------------------+--------------+
+
