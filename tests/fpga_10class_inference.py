@@ -93,6 +93,26 @@ PROFILE_ROUTER_NAMES = [
     'same_group_event_count', 'total_latency_cycles',
 ]
 
+PROFILE_BASIC_NAMES = [
+    'total_latency_cycles',
+    'ct_lookup_count',
+    'ct_valid_entry_count',
+    'router_busy_cycles',
+    'router_stall_cycles',
+    'cross_group_event_count',
+    'same_group_event_count',
+    'intra_weight_lookup_count',
+    'intra_weight_nonzero_count',
+    'intra_fifo_blocked_event_count',
+    'drop_spike_count',
+] + [
+    f'class_{cls}_spike_count' for cls in range(10)
+] + [
+    f'class_{cls}_score' for cls in range(10)
+] + [
+    f'class_{cls}_event_count' for cls in range(10)
+]
+
 # AXI DMA
 DMA_MM2S_DMACR      = 0x00
 DMA_MM2S_DMASR      = 0x04
@@ -505,26 +525,127 @@ def router_readback(cfg: MMIO, addr: int) -> int:
 def read_profile_snapshot(cfg: MMIO, num_groups: int) -> dict:
     """Read the latched per-sample profile snapshot through the indirect window."""
     result = {}
+    profile_info = int(cfg.read(CFG_PROFILE_INFO))
+    profile_count = profile_info & 0xFFFF
+    profile_version = (profile_info >> 24) & 0xFF
+
+    if profile_version >= 10:
+        for index, name in enumerate(PROFILE_BASIC_NAMES[:profile_count]):
+            cfg.write(CFG_PROFILE_INDEX, index)
+            result[name] = int(cfg.read(CFG_PROFILE_DATA))
+        if 'drop_spike_count' in result:
+            result['out_fifo_overflow_drop_count'] = result['drop_spike_count']
+        return result
+
     for index, name in enumerate(PROFILE_ROUTER_NAMES):
+        if index >= profile_count:
+            return result
         cfg.write(CFG_PROFILE_INDEX, index)
         result[name] = int(cfg.read(CFG_PROFILE_DATA))
-
-    core_base = 11 + 2 * num_groups
+    router_group_base = 11
+    router_class_score_base = 11 + 2 * num_groups
+    router_class_event_base = router_class_score_base + 10
+    router_class_profile_count = router_class_event_base + 10
     core_names = [
         'intra_route_start_count',
         'intra_weight_lookup_count',
         'intra_weight_nonzero_count',
         'intra_fifo_push_count',
         'intra_fifo_blocked_event_count',
+        'out_fifo_overflow_drop_count',
     ]
+
+    legacy_core_base = router_class_score_base
+    new_core_base = router_class_profile_count
+    new_classifier_base = new_core_base + num_groups * len(core_names)
+    has_extended_router_profile = profile_version >= 2
+    has_router_class_profile = (
+        profile_version >= 2 and profile_count >= router_class_profile_count
+    )
+    core_base = new_core_base if has_extended_router_profile else legacy_core_base
+
+    if has_router_class_profile:
+        for cls in range(10):
+            cfg.write(CFG_PROFILE_INDEX, router_class_score_base + cls)
+            result[f'class_{cls}_score'] = int(cfg.read(CFG_PROFILE_DATA))
+        for cls in range(10):
+            cfg.write(CFG_PROFILE_INDEX, router_class_event_base + cls)
+            result[f'class_{cls}_event_count'] = int(cfg.read(CFG_PROFILE_DATA))
+
     for group in range(num_groups):
-        cfg.write(CFG_PROFILE_INDEX, 11 + group)
+        cfg.write(CFG_PROFILE_INDEX, router_group_base + group)
         result[f'group_{group}_in_event_count'] = int(cfg.read(CFG_PROFILE_DATA))
-        cfg.write(CFG_PROFILE_INDEX, 11 + num_groups + group)
+        cfg.write(CFG_PROFILE_INDEX, router_group_base + num_groups + group)
         result[f'group_{group}_stall_cycles'] = int(cfg.read(CFG_PROFILE_DATA))
         for metric, name in enumerate(core_names):
             cfg.write(CFG_PROFILE_INDEX, core_base + group * len(core_names) + metric)
             result[f'group_{group}_{name}'] = int(cfg.read(CFG_PROFILE_DATA))
+
+    classifier_base = core_base + num_groups * len(core_names)
+    if profile_count >= classifier_base + 3:
+        cfg.write(CFG_PROFILE_INDEX, classifier_base)
+        result['first_classifier_spike_valid'] = int(cfg.read(CFG_PROFILE_DATA)) & 0x1
+        cfg.write(CFG_PROFILE_INDEX, classifier_base + 1)
+        result['first_classifier_spike_id'] = int(cfg.read(CFG_PROFILE_DATA))
+        cfg.write(CFG_PROFILE_INDEX, classifier_base + 2)
+        result['first_classifier_spike_cycle'] = int(cfg.read(CFG_PROFILE_DATA))
+    class_count_base = classifier_base + 3
+    if profile_count >= class_count_base + 10:
+        for cls in range(10):
+            cfg.write(CFG_PROFILE_INDEX, class_count_base + cls)
+            result[f'class_{cls}_spike_count'] = int(cfg.read(CFG_PROFILE_DATA))
+    class_score_base = class_count_base + 10
+    has_top_class_profile = (
+        (not has_router_class_profile) and
+        profile_version >= 3 and
+        profile_count >= class_score_base + 20
+    )
+    if has_top_class_profile or ((not has_router_class_profile) and profile_count >= class_score_base + 10):
+        for cls in range(10):
+            cfg.write(CFG_PROFILE_INDEX, class_score_base + cls)
+            result[f'class_{cls}_score'] = int(cfg.read(CFG_PROFILE_DATA))
+    class_event_base = class_score_base + 10
+    if has_top_class_profile or ((not has_router_class_profile) and profile_count >= class_event_base + 10):
+        for cls in range(10):
+            cfg.write(CFG_PROFILE_INDEX, class_event_base + cls)
+            result[f'class_{cls}_event_count'] = int(cfg.read(CFG_PROFILE_DATA))
+    input_source_group_base = class_event_base + 10
+    if profile_version >= 5 and profile_count >= input_source_group_base + num_groups:
+        for group in range(num_groups):
+            cfg.write(CFG_PROFILE_INDEX, input_source_group_base + group)
+            result[f'input_source_group_{group}_spike_count'] = int(cfg.read(CFG_PROFILE_DATA))
+    input_source_bitmap_base = input_source_group_base + num_groups
+    input_source_neurons = 784
+    input_source_bitmap_words = (input_source_neurons + 31) // 32
+    if profile_version >= 7 and profile_count >= input_source_bitmap_base + input_source_bitmap_words:
+        bitmap_words = []
+        active_pixels = []
+        for word_idx in range(input_source_bitmap_words):
+            cfg.write(CFG_PROFILE_INDEX, input_source_bitmap_base + word_idx)
+            word = int(cfg.read(CFG_PROFILE_DATA))
+            bitmap_words.append(word)
+            for bit in range(32):
+                pixel_idx = word_idx * 32 + bit
+                if pixel_idx < input_source_neurons and ((word >> bit) & 0x1):
+                    active_pixels.append(pixel_idx)
+        result['input_source_bitmap_words'] = bitmap_words
+        result['input_source_active_pixels'] = active_pixels
+        result['input_source_active_pixel_count'] = len(active_pixels)
+    input_source_ct_bitmap_base = input_source_bitmap_base + input_source_bitmap_words
+    if profile_version >= 8 and profile_count >= input_source_ct_bitmap_base + input_source_bitmap_words:
+        bitmap_words = []
+        active_pixels = []
+        for word_idx in range(input_source_bitmap_words):
+            cfg.write(CFG_PROFILE_INDEX, input_source_ct_bitmap_base + word_idx)
+            word = int(cfg.read(CFG_PROFILE_DATA))
+            bitmap_words.append(word)
+            for bit in range(32):
+                pixel_idx = word_idx * 32 + bit
+                if pixel_idx < input_source_neurons and ((word >> bit) & 0x1):
+                    active_pixels.append(pixel_idx)
+        result['input_source_ct_bitmap_words'] = bitmap_words
+        result['input_source_ct_active_pixels'] = active_pixels
+        result['input_source_ct_active_pixel_count'] = len(active_pixels)
     return result
 
 
@@ -1348,11 +1469,17 @@ def main():
     profile_num_groups = 0
     if profile_enabled:
         profile_info = cfg.read(CFG_PROFILE_INFO)
-        if profile_info == 0xDEADBEEF or ((profile_info >> 24) & 0xFF) != 1:
+        profile_version = (profile_info >> 24) & 0xFF
+        if profile_info == 0xDEADBEEF or profile_version < 1:
             print("ERROR: --profile-output requested, but this bitstream has no profile window.")
             sys.exit(1)
         profile_num_groups = (profile_info >> 16) & 0xFF
-        print(f"  profile info: 0x{profile_info:08X}  groups={profile_num_groups}")
+        profile_counter_count = profile_info & 0xFFFF
+        print(
+            f"  profile info: 0x{profile_info:08X}  "
+            f"version={profile_version} groups={profile_num_groups} "
+            f"counters={profile_counter_count}"
+        )
     if args.check_hls_version:
         hls_ver = hls.read(HLS_VERSION_REG)
         print(f"  hls version_reg: 0x{hls_ver:08X}  "

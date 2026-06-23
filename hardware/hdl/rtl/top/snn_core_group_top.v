@@ -91,7 +91,22 @@ module snn_core_group_top #(
     // HLS Compatibility
     parameter HLS_NEURON_ID_WIDTH   = `SNN_HLS_NEURON_ID_WIDTH,
     parameter HLS_MAX_NEURONS       = `SNN_TOTAL_NEURONS,
-    parameter HLS_WEIGHT_WIDTH      = `SNN_HLS_WEIGHT_WIDTH
+    parameter HLS_WEIGHT_WIDTH      = `SNN_HLS_WEIGHT_WIDTH,
+
+    // Current runtime maps classifier neurons round-robin into the first
+    // CLASSIFIER_NEURONS logical IDs. The latch below ignores input-source
+    // proxy neurons used by real CT modes.
+    parameter CLASSIFIER_NEURONS    = 150,
+    parameter INPUT_SOURCE_NEURONS  = 784,
+    parameter NUM_CLASSES           = 10,
+    parameter FPS_PER_CLASS         = 15,
+
+    // Profile build-time switches. BASIC keeps only low-cost aggregate
+    // counters in the AXI read window; DETAIL/PER_GROUP retain the larger
+    // debug windows when explicitly enabled for bring-up.
+    parameter ENABLE_PROFILE_BASIC     = 1,
+    parameter ENABLE_PROFILE_DETAIL    = 0,
+    parameter ENABLE_PROFILE_PER_GROUP = 0
 )(
     //-------------------------------------------------------------------------
     // DDR Interface (directly from PS)
@@ -232,7 +247,7 @@ module snn_core_group_top #(
     // Core group status
     wire [NUM_GROUPS*32-1:0]                    grp_spike_count;
     wire [NUM_GROUPS-1:0]                       grp_busy;
-    wire [NUM_GROUPS*5*32-1:0]                  grp_profile_snapshot;
+    wire [NUM_GROUPS*6*32-1:0]                  grp_profile_snapshot;
 
     //=========================================================================
     // Internal Wiring: Event Router <-> Connectivity Table
@@ -295,8 +310,16 @@ module snn_core_group_top #(
     // Router status
     wire [31:0]                   routed_spike_count;
     wire                          router_busy;
-    wire [(11+2*NUM_GROUPS)*32-1:0] router_profile_snapshot;
-
+    wire [(11+2*NUM_GROUPS+2*NUM_CLASSES)*32-1:0] router_profile_snapshot;
+    wire                          router_profile_fanout_valid;
+    wire [GROUP_ID_WIDTH-1:0]     router_profile_fanout_src_group;
+    wire [LOCAL_ID_WIDTH-1:0]     router_profile_fanout_src_neuron;
+    wire [GROUP_ID_WIDTH-1:0]     router_profile_fanout_dst_group;
+    wire [LOCAL_ID_WIDTH-1:0]     router_profile_fanout_dst_neuron;
+    wire [WEIGHT_WIDTH-1:0]       router_profile_fanout_weight;
+    wire                          router_profile_class_valid;
+    wire [3:0]                    router_profile_class_id;
+    wire [WEIGHT_WIDTH-1:0]       router_profile_class_weight;
     //=========================================================================
     // Global first-spike tap for TTFS first-spike classification
     //=========================================================================
@@ -309,15 +332,62 @@ module snn_core_group_top #(
     reg                          hls_spike_in_ready_d;
     reg                          first_spike_tap_seen;
     reg [GLOBAL_ID_WIDTH-1:0]    first_spike_tap_candidate;
+    reg                          first_classifier_spike_seen;
+    reg [GLOBAL_ID_WIDTH-1:0]    first_classifier_spike_candidate;
     integer                      first_spike_tap_i;
+
+    function is_classifier_global_id;
+        input [GROUP_ID_WIDTH-1:0] group_id;
+        input [LOCAL_ID_WIDTH-1:0] local_id;
+        integer logical_id;
+        begin
+            logical_id = local_id * NUM_GROUPS + group_id;
+            is_classifier_global_id = (logical_id < CLASSIFIER_NEURONS);
+        end
+    endfunction
+
+    function is_input_source_global_id;
+        input [GROUP_ID_WIDTH-1:0] group_id;
+        input [LOCAL_ID_WIDTH-1:0] local_id;
+        integer logical_id;
+        begin
+            logical_id = local_id * NUM_GROUPS + group_id;
+            is_input_source_global_id =
+                (logical_id >= CLASSIFIER_NEURONS) &&
+                (logical_id < CLASSIFIER_NEURONS + INPUT_SOURCE_NEURONS);
+        end
+    endfunction
+
+    function [3:0] classifier_class_id;
+        input [GROUP_ID_WIDTH-1:0] group_id;
+        input [LOCAL_ID_WIDTH-1:0] local_id;
+        integer logical_id;
+        begin
+            logical_id = local_id * NUM_GROUPS + group_id;
+            classifier_class_id = logical_id / FPS_PER_CLASS;
+        end
+    endfunction
 
     always @(*) begin
         first_spike_tap_seen = 1'b0;
         first_spike_tap_candidate = {GLOBAL_ID_WIDTH{1'b0}};
+        first_classifier_spike_seen = 1'b0;
+        first_classifier_spike_candidate = {GLOBAL_ID_WIDTH{1'b0}};
         for (first_spike_tap_i = 0; first_spike_tap_i < NUM_GROUPS; first_spike_tap_i = first_spike_tap_i + 1) begin
             if (!first_spike_tap_seen && grp_spike_valid[first_spike_tap_i]) begin
                 first_spike_tap_seen = 1'b1;
                 first_spike_tap_candidate = {
+                    first_spike_tap_i[GROUP_ID_WIDTH-1:0],
+                    grp_spike_neuron_id[first_spike_tap_i*LOCAL_ID_WIDTH +: LOCAL_ID_WIDTH]
+                };
+            end
+            if (ENABLE_PROFILE_DETAIL && !first_classifier_spike_seen && grp_spike_valid[first_spike_tap_i] &&
+                is_classifier_global_id(
+                    first_spike_tap_i[GROUP_ID_WIDTH-1:0],
+                    grp_spike_neuron_id[first_spike_tap_i*LOCAL_ID_WIDTH +: LOCAL_ID_WIDTH]
+                )) begin
+                first_classifier_spike_seen = 1'b1;
+                first_classifier_spike_candidate = {
                     first_spike_tap_i[GROUP_ID_WIDTH-1:0],
                     grp_spike_neuron_id[first_spike_tap_i*LOCAL_ID_WIDTH +: LOCAL_ID_WIDTH]
                 };
@@ -351,15 +421,39 @@ module snn_core_group_top #(
     //=========================================================================
     // Per-sample profile control and snapshot readback
     //=========================================================================
-    localparam PROFILE_ROUTER_SCALAR_COUNT = 11;
-    localparam PROFILE_ROUTER_TOTAL_COUNT  = 11 + 2*NUM_GROUPS;
+    localparam PROFILE_ROUTER_TOTAL_COUNT  = 11 + 2*NUM_GROUPS + 2*NUM_CLASSES;
     localparam PROFILE_CORE_BASE           = PROFILE_ROUTER_TOTAL_COUNT;
-    localparam PROFILE_TOTAL_COUNT         = PROFILE_CORE_BASE + 5*NUM_GROUPS;
+    localparam PROFILE_CORE_METRIC_COUNT   = 6;
+    localparam PROFILE_CLASSIFIER_BASE     = PROFILE_CORE_BASE + PROFILE_CORE_METRIC_COUNT*NUM_GROUPS;
+    localparam PROFILE_CLASS_COUNT_BASE    = PROFILE_CLASSIFIER_BASE + 3;
+    localparam PROFILE_CLASS_SCORE_BASE    = PROFILE_CLASS_COUNT_BASE + NUM_CLASSES;
+    localparam PROFILE_CLASS_EVENT_BASE    = PROFILE_CLASS_SCORE_BASE + NUM_CLASSES;
+    localparam PROFILE_INPUT_SOURCE_GROUP_BASE = PROFILE_CLASS_EVENT_BASE + NUM_CLASSES;
+    localparam PROFILE_INPUT_SOURCE_BITMAP_BASE = PROFILE_INPUT_SOURCE_GROUP_BASE + NUM_GROUPS;
+    localparam PROFILE_INPUT_SOURCE_BITMAP_WORDS = (INPUT_SOURCE_NEURONS + 31) / 32;
+    localparam PROFILE_INPUT_SOURCE_BITMAP_BITS = PROFILE_INPUT_SOURCE_BITMAP_WORDS * 32;
+    localparam PROFILE_INPUT_SOURCE_PIXEL_WIDTH = $clog2(INPUT_SOURCE_NEURONS);
+    localparam PROFILE_INPUT_SOURCE_CT_BITMAP_BASE = PROFILE_INPUT_SOURCE_BITMAP_BASE + PROFILE_INPUT_SOURCE_BITMAP_WORDS;
+    localparam PROFILE_FULL_COUNT          = PROFILE_INPUT_SOURCE_CT_BITMAP_BASE + PROFILE_INPUT_SOURCE_BITMAP_WORDS;
+    localparam PROFILE_BASIC_SCALAR_COUNT = 11;
+    localparam PROFILE_BASIC_CLASS_COUNT_BASE = PROFILE_BASIC_SCALAR_COUNT;
+    localparam PROFILE_BASIC_CLASS_SCORE_BASE = PROFILE_BASIC_CLASS_COUNT_BASE + NUM_CLASSES;
+    localparam PROFILE_BASIC_CLASS_EVENT_BASE = PROFILE_BASIC_CLASS_SCORE_BASE + NUM_CLASSES;
+    localparam PROFILE_BASIC_COUNT         = PROFILE_BASIC_CLASS_EVENT_BASE + NUM_CLASSES;
+    localparam PROFILE_BASIC_ONLY          =
+        (ENABLE_PROFILE_BASIC != 0) &&
+        (ENABLE_PROFILE_DETAIL == 0) &&
+        (ENABLE_PROFILE_PER_GROUP == 0);
+    localparam PROFILE_CLASS_ENABLE        =
+        (ENABLE_PROFILE_BASIC != 0) || (ENABLE_PROFILE_DETAIL != 0);
+    localparam PROFILE_TOTAL_COUNT         = PROFILE_BASIC_ONLY ? PROFILE_BASIC_COUNT : PROFILE_FULL_COUNT;
     localparam [7:0] PROFILE_NUM_GROUPS_INFO = NUM_GROUPS;
     localparam [15:0] PROFILE_TOTAL_COUNT_INFO = PROFILE_TOTAL_COUNT;
+    localparam [7:0] PROFILE_VERSION_INFO = PROFILE_BASIC_ONLY ? 8'h0A : 8'h09;
 
     reg        profile_active;
     reg        profile_done;
+    reg        profile_stop_local;
     reg [31:0] total_latency_live;
     reg [31:0] total_latency_snapshot;
     reg [31:0] first_spike_latency_live;
@@ -371,14 +465,212 @@ module snn_core_group_top #(
     reg        sample_service_done;
     reg        sample_seen_input;
     reg        sample_seen_output;
+    reg        first_classifier_spike_valid_live;
+    reg        first_classifier_spike_valid_snapshot;
+    reg [GLOBAL_ID_WIDTH-1:0] first_classifier_spike_id_live;
+    reg [GLOBAL_ID_WIDTH-1:0] first_classifier_spike_id_snapshot;
+    reg [31:0] first_classifier_spike_cycle_live;
+    reg [31:0] first_classifier_spike_cycle_snapshot;
+    reg [31:0] classifier_class_count_live [0:NUM_CLASSES-1];
+    reg [31:0] classifier_class_count_snapshot [0:NUM_CLASSES-1];
+    reg [31:0] classifier_class_score_live [0:NUM_CLASSES-1];
+    reg [31:0] classifier_class_score_snapshot [0:NUM_CLASSES-1];
+    reg [31:0] classifier_class_event_live [0:NUM_CLASSES-1];
+    reg [31:0] classifier_class_event_snapshot [0:NUM_CLASSES-1];
+    reg [31:0] input_source_group_count_live [0:NUM_GROUPS-1];
+    reg [31:0] input_source_group_count_snapshot [0:NUM_GROUPS-1];
+    reg [PROFILE_INPUT_SOURCE_BITMAP_BITS-1:0] input_source_bitmap_live;
+    reg [PROFILE_INPUT_SOURCE_BITMAP_BITS-1:0] input_source_bitmap_snapshot;
+    reg [PROFILE_INPUT_SOURCE_BITMAP_BITS-1:0] input_source_ct_bitmap_live;
+    reg [PROFILE_INPUT_SOURCE_BITMAP_BITS-1:0] input_source_ct_bitmap_snapshot;
+    reg        profile_group_event_valid_comb;
+    reg [GROUP_ID_WIDTH-1:0] profile_group_event_group_comb;
+    reg [LOCAL_ID_WIDTH-1:0] profile_group_event_neuron_comb;
+    reg        profile_group_event_class_valid_comb;
+    reg [3:0]  profile_group_event_class_id_comb;
+    reg        profile_group_event_input_source_comb;
+    reg [PROFILE_INPUT_SOURCE_PIXEL_WIDTH-1:0] profile_group_event_pixel_comb;
+    reg        profile_group_event_valid_d;
+    reg [GROUP_ID_WIDTH-1:0] profile_group_event_group_d;
+    reg        profile_group_event_class_valid_d;
+    reg [3:0]  profile_group_event_class_id_d;
+    reg        profile_group_event_input_source_d;
+    reg [PROFILE_INPUT_SOURCE_PIXEL_WIDTH-1:0] profile_group_event_pixel_d;
+    reg        profile_class_valid_d;
+    reg [3:0]  profile_class_id_d;
+    reg [WEIGHT_WIDTH-1:0] profile_class_weight_d;
+    reg        profile_fanout_input_source_valid_comb;
+    reg [PROFILE_INPUT_SOURCE_PIXEL_WIDTH-1:0] profile_fanout_input_source_pixel_comb;
+    reg        profile_fanout_input_source_valid_d;
+    reg [PROFILE_INPUT_SOURCE_PIXEL_WIDTH-1:0] profile_fanout_input_source_pixel_d;
+    reg [31:0] basic_intra_weight_lookup_sum;
+    reg [31:0] basic_intra_weight_nonzero_sum;
+    reg [31:0] basic_intra_fifo_blocked_sum;
+    reg [31:0] basic_drop_spike_sum;
     integer profile_sel;
+    integer class_count_i;
+    integer class_count_gi;
+    integer input_source_pixel_id;
+    integer basic_profile_gi;
 
-    assign cfg_profile_info = {8'h01, PROFILE_NUM_GROUPS_INFO, PROFILE_TOTAL_COUNT_INFO};
+    always @(*) begin
+        basic_intra_weight_lookup_sum = 32'd0;
+        basic_intra_weight_nonzero_sum = 32'd0;
+        basic_intra_fifo_blocked_sum = 32'd0;
+        basic_drop_spike_sum = 32'd0;
+        for (basic_profile_gi = 0; basic_profile_gi < NUM_GROUPS; basic_profile_gi = basic_profile_gi + 1) begin
+            basic_intra_weight_lookup_sum =
+                basic_intra_weight_lookup_sum +
+                grp_profile_snapshot[(basic_profile_gi*PROFILE_CORE_METRIC_COUNT + 1)*32 +: 32];
+            basic_intra_weight_nonzero_sum =
+                basic_intra_weight_nonzero_sum +
+                grp_profile_snapshot[(basic_profile_gi*PROFILE_CORE_METRIC_COUNT + 2)*32 +: 32];
+            basic_intra_fifo_blocked_sum =
+                basic_intra_fifo_blocked_sum +
+                grp_profile_snapshot[(basic_profile_gi*PROFILE_CORE_METRIC_COUNT + 4)*32 +: 32];
+            basic_drop_spike_sum =
+                basic_drop_spike_sum +
+                grp_profile_snapshot[(basic_profile_gi*PROFILE_CORE_METRIC_COUNT + 5)*32 +: 32];
+        end
+    end
+
+    always @(*) begin
+        input_source_pixel_id = 0;
+        profile_group_event_valid_comb = 1'b0;
+        profile_group_event_group_comb = {GROUP_ID_WIDTH{1'b0}};
+        profile_group_event_neuron_comb = {LOCAL_ID_WIDTH{1'b0}};
+        profile_group_event_class_valid_comb = 1'b0;
+        profile_group_event_class_id_comb = 4'd0;
+        profile_group_event_input_source_comb = 1'b0;
+        profile_group_event_pixel_comb = {PROFILE_INPUT_SOURCE_PIXEL_WIDTH{1'b0}};
+        profile_fanout_input_source_valid_comb = 1'b0;
+        profile_fanout_input_source_pixel_comb = {PROFILE_INPUT_SOURCE_PIXEL_WIDTH{1'b0}};
+
+        if (PROFILE_CLASS_ENABLE || ENABLE_PROFILE_PER_GROUP) begin
+            for (class_count_gi = 0; class_count_gi < NUM_GROUPS; class_count_gi = class_count_gi + 1) begin
+                if (!profile_group_event_valid_comb &&
+                    grp_spike_valid[class_count_gi] &&
+                    grp_spike_ready[class_count_gi]) begin
+                    profile_group_event_valid_comb = 1'b1;
+                    profile_group_event_group_comb = class_count_gi[GROUP_ID_WIDTH-1:0];
+                    profile_group_event_neuron_comb =
+                        grp_spike_neuron_id[class_count_gi*LOCAL_ID_WIDTH +: LOCAL_ID_WIDTH];
+                    profile_group_event_class_valid_comb = is_classifier_global_id(
+                        class_count_gi[GROUP_ID_WIDTH-1:0],
+                        grp_spike_neuron_id[class_count_gi*LOCAL_ID_WIDTH +: LOCAL_ID_WIDTH]
+                    );
+                    profile_group_event_class_id_comb = classifier_class_id(
+                        class_count_gi[GROUP_ID_WIDTH-1:0],
+                        grp_spike_neuron_id[class_count_gi*LOCAL_ID_WIDTH +: LOCAL_ID_WIDTH]
+                    );
+                    profile_group_event_input_source_comb = is_input_source_global_id(
+                        class_count_gi[GROUP_ID_WIDTH-1:0],
+                        grp_spike_neuron_id[class_count_gi*LOCAL_ID_WIDTH +: LOCAL_ID_WIDTH]
+                    );
+                    input_source_pixel_id =
+                        (grp_spike_neuron_id[class_count_gi*LOCAL_ID_WIDTH +: LOCAL_ID_WIDTH] *
+                         NUM_GROUPS + class_count_gi) - CLASSIFIER_NEURONS;
+                    if (input_source_pixel_id >= 0 && input_source_pixel_id < INPUT_SOURCE_NEURONS)
+                        profile_group_event_pixel_comb =
+                            input_source_pixel_id[PROFILE_INPUT_SOURCE_PIXEL_WIDTH-1:0];
+                end
+            end
+        end
+
+        if (ENABLE_PROFILE_DETAIL && router_profile_fanout_valid &&
+            is_input_source_global_id(
+                router_profile_fanout_src_group,
+                router_profile_fanout_src_neuron
+            )) begin
+            input_source_pixel_id =
+                (router_profile_fanout_src_neuron * NUM_GROUPS +
+                 router_profile_fanout_src_group) - CLASSIFIER_NEURONS;
+            if (input_source_pixel_id >= 0 && input_source_pixel_id < INPUT_SOURCE_NEURONS) begin
+                profile_fanout_input_source_valid_comb = 1'b1;
+                profile_fanout_input_source_pixel_comb =
+                    input_source_pixel_id[PROFILE_INPUT_SOURCE_PIXEL_WIDTH-1:0];
+            end
+        end
+    end
+
+    task automatic bump_class_count;
+        input [3:0] class_id;
+        begin
+            case (class_id)
+                4'd0: classifier_class_count_live[0] <= classifier_class_count_live[0] + 1'b1;
+                4'd1: classifier_class_count_live[1] <= classifier_class_count_live[1] + 1'b1;
+                4'd2: classifier_class_count_live[2] <= classifier_class_count_live[2] + 1'b1;
+                4'd3: classifier_class_count_live[3] <= classifier_class_count_live[3] + 1'b1;
+                4'd4: classifier_class_count_live[4] <= classifier_class_count_live[4] + 1'b1;
+                4'd5: classifier_class_count_live[5] <= classifier_class_count_live[5] + 1'b1;
+                4'd6: classifier_class_count_live[6] <= classifier_class_count_live[6] + 1'b1;
+                4'd7: classifier_class_count_live[7] <= classifier_class_count_live[7] + 1'b1;
+                4'd8: classifier_class_count_live[8] <= classifier_class_count_live[8] + 1'b1;
+                4'd9: classifier_class_count_live[9] <= classifier_class_count_live[9] + 1'b1;
+                default: begin
+                end
+            endcase
+        end
+    endtask
+
+    task automatic bump_class_score_event;
+        input [3:0] class_id;
+        input [WEIGHT_WIDTH-1:0] weight;
+        begin
+            case (class_id)
+                4'd0: begin
+                    classifier_class_score_live[0] <= classifier_class_score_live[0] + weight;
+                    classifier_class_event_live[0] <= classifier_class_event_live[0] + 1'b1;
+                end
+                4'd1: begin
+                    classifier_class_score_live[1] <= classifier_class_score_live[1] + weight;
+                    classifier_class_event_live[1] <= classifier_class_event_live[1] + 1'b1;
+                end
+                4'd2: begin
+                    classifier_class_score_live[2] <= classifier_class_score_live[2] + weight;
+                    classifier_class_event_live[2] <= classifier_class_event_live[2] + 1'b1;
+                end
+                4'd3: begin
+                    classifier_class_score_live[3] <= classifier_class_score_live[3] + weight;
+                    classifier_class_event_live[3] <= classifier_class_event_live[3] + 1'b1;
+                end
+                4'd4: begin
+                    classifier_class_score_live[4] <= classifier_class_score_live[4] + weight;
+                    classifier_class_event_live[4] <= classifier_class_event_live[4] + 1'b1;
+                end
+                4'd5: begin
+                    classifier_class_score_live[5] <= classifier_class_score_live[5] + weight;
+                    classifier_class_event_live[5] <= classifier_class_event_live[5] + 1'b1;
+                end
+                4'd6: begin
+                    classifier_class_score_live[6] <= classifier_class_score_live[6] + weight;
+                    classifier_class_event_live[6] <= classifier_class_event_live[6] + 1'b1;
+                end
+                4'd7: begin
+                    classifier_class_score_live[7] <= classifier_class_score_live[7] + weight;
+                    classifier_class_event_live[7] <= classifier_class_event_live[7] + 1'b1;
+                end
+                4'd8: begin
+                    classifier_class_score_live[8] <= classifier_class_score_live[8] + weight;
+                    classifier_class_event_live[8] <= classifier_class_event_live[8] + 1'b1;
+                end
+                4'd9: begin
+                    classifier_class_score_live[9] <= classifier_class_score_live[9] + weight;
+                    classifier_class_event_live[9] <= classifier_class_event_live[9] + 1'b1;
+                end
+                default: begin
+                end
+            endcase
+        end
+    endtask
+
+    assign cfg_profile_info = {PROFILE_VERSION_INFO, PROFILE_NUM_GROUPS_INFO, PROFILE_TOTAL_COUNT_INFO};
 
     always @(posedge clk_100mhz) begin
         if (!rst_n_sync || hls_snn_reset) begin
             profile_active          <= 1'b0;
             profile_done            <= 1'b0;
+            profile_stop_local      <= 1'b0;
             total_latency_live      <= 32'd0;
             total_latency_snapshot  <= 32'd0;
             first_spike_latency_live     <= 32'd0;
@@ -390,10 +682,45 @@ module snn_core_group_top #(
             sample_service_done          <= 1'b0;
             sample_seen_input            <= 1'b0;
             sample_seen_output           <= 1'b0;
+            first_classifier_spike_valid_live     <= 1'b0;
+            first_classifier_spike_valid_snapshot <= 1'b0;
+            first_classifier_spike_id_live        <= {GLOBAL_ID_WIDTH{1'b0}};
+            first_classifier_spike_id_snapshot    <= {GLOBAL_ID_WIDTH{1'b0}};
+            first_classifier_spike_cycle_live     <= 32'd0;
+            first_classifier_spike_cycle_snapshot <= 32'd0;
+            for (class_count_i = 0; class_count_i < NUM_CLASSES; class_count_i = class_count_i + 1) begin
+                classifier_class_count_live[class_count_i] <= 32'd0;
+                classifier_class_count_snapshot[class_count_i] <= 32'd0;
+                classifier_class_score_live[class_count_i] <= 32'd0;
+                classifier_class_score_snapshot[class_count_i] <= 32'd0;
+                classifier_class_event_live[class_count_i] <= 32'd0;
+                classifier_class_event_snapshot[class_count_i] <= 32'd0;
+            end
+            for (class_count_i = 0; class_count_i < NUM_GROUPS; class_count_i = class_count_i + 1) begin
+                input_source_group_count_live[class_count_i] <= 32'd0;
+                input_source_group_count_snapshot[class_count_i] <= 32'd0;
+            end
+            input_source_bitmap_live <= {PROFILE_INPUT_SOURCE_BITMAP_BITS{1'b0}};
+            input_source_bitmap_snapshot <= {PROFILE_INPUT_SOURCE_BITMAP_BITS{1'b0}};
+            input_source_ct_bitmap_live <= {PROFILE_INPUT_SOURCE_BITMAP_BITS{1'b0}};
+            input_source_ct_bitmap_snapshot <= {PROFILE_INPUT_SOURCE_BITMAP_BITS{1'b0}};
+            profile_group_event_valid_d <= 1'b0;
+            profile_group_event_group_d <= {GROUP_ID_WIDTH{1'b0}};
+            profile_group_event_class_valid_d <= 1'b0;
+            profile_group_event_class_id_d <= 4'd0;
+            profile_group_event_input_source_d <= 1'b0;
+            profile_group_event_pixel_d <= {PROFILE_INPUT_SOURCE_PIXEL_WIDTH{1'b0}};
+            profile_class_valid_d <= 1'b0;
+            profile_class_id_d <= 4'd0;
+            profile_class_weight_d <= {WEIGHT_WIDTH{1'b0}};
+            profile_fanout_input_source_valid_d <= 1'b0;
+            profile_fanout_input_source_pixel_d <= {PROFILE_INPUT_SOURCE_PIXEL_WIDTH{1'b0}};
         end else begin
+            profile_stop_local <= cfg_profile_stop;
             if (cfg_profile_start) begin
                 profile_active               <= 1'b1;
                 profile_done                 <= 1'b0;
+                profile_stop_local           <= 1'b0;
                 total_latency_live           <= 32'd0;
                 first_spike_latency_live     <= 32'd0;
                 first_spike_latency_snapshot <= 32'd0;
@@ -404,6 +731,39 @@ module snn_core_group_top #(
                 sample_service_done          <= 1'b0;
                 sample_seen_input            <= 1'b0;
                 sample_seen_output           <= 1'b0;
+                first_classifier_spike_valid_live     <= 1'b0;
+                first_classifier_spike_valid_snapshot <= 1'b0;
+                first_classifier_spike_id_live        <= {GLOBAL_ID_WIDTH{1'b0}};
+                first_classifier_spike_id_snapshot    <= {GLOBAL_ID_WIDTH{1'b0}};
+                first_classifier_spike_cycle_live     <= 32'd0;
+                first_classifier_spike_cycle_snapshot <= 32'd0;
+                for (class_count_i = 0; class_count_i < NUM_CLASSES; class_count_i = class_count_i + 1) begin
+                    classifier_class_count_live[class_count_i] <= 32'd0;
+                    classifier_class_count_snapshot[class_count_i] <= 32'd0;
+                    classifier_class_score_live[class_count_i] <= 32'd0;
+                    classifier_class_score_snapshot[class_count_i] <= 32'd0;
+                    classifier_class_event_live[class_count_i] <= 32'd0;
+                    classifier_class_event_snapshot[class_count_i] <= 32'd0;
+                end
+                for (class_count_i = 0; class_count_i < NUM_GROUPS; class_count_i = class_count_i + 1) begin
+                    input_source_group_count_live[class_count_i] <= 32'd0;
+                    input_source_group_count_snapshot[class_count_i] <= 32'd0;
+                end
+                input_source_bitmap_live <= {PROFILE_INPUT_SOURCE_BITMAP_BITS{1'b0}};
+                input_source_bitmap_snapshot <= {PROFILE_INPUT_SOURCE_BITMAP_BITS{1'b0}};
+                input_source_ct_bitmap_live <= {PROFILE_INPUT_SOURCE_BITMAP_BITS{1'b0}};
+                input_source_ct_bitmap_snapshot <= {PROFILE_INPUT_SOURCE_BITMAP_BITS{1'b0}};
+                profile_group_event_valid_d <= 1'b0;
+                profile_group_event_group_d <= {GROUP_ID_WIDTH{1'b0}};
+                profile_group_event_class_valid_d <= 1'b0;
+                profile_group_event_class_id_d <= 4'd0;
+                profile_group_event_input_source_d <= 1'b0;
+                profile_group_event_pixel_d <= {PROFILE_INPUT_SOURCE_PIXEL_WIDTH{1'b0}};
+                profile_class_valid_d <= 1'b0;
+                profile_class_id_d <= 4'd0;
+                profile_class_weight_d <= {WEIGHT_WIDTH{1'b0}};
+                profile_fanout_input_source_valid_d <= 1'b0;
+                profile_fanout_input_source_pixel_d <= {PROFILE_INPUT_SOURCE_PIXEL_WIDTH{1'b0}};
             end else if (profile_active) begin
                 total_latency_live <= total_latency_live + 1'b1;
                 if (hls_spike_out_pulse && !sample_seen_input) begin
@@ -419,23 +779,115 @@ module snn_core_group_top #(
                         service_cycles_live <= service_cycles_live + 1'b1;
                     if (!sample_seen_output)
                         first_spike_latency_live <= first_spike_latency_live + 1'b1;
+                    if (!first_classifier_spike_valid_live)
+                        first_classifier_spike_cycle_live <= first_classifier_spike_cycle_live + 1'b1;
                 end
                 if (sample_seen_input && !sample_seen_output && rtl_spike_out_valid) begin
                     sample_seen_output <= 1'b1;
                     first_spike_latency_snapshot <= first_spike_latency_live;
                 end
+                if (ENABLE_PROFILE_DETAIL &&
+                    sample_seen_input && !first_classifier_spike_valid_live && first_classifier_spike_seen) begin
+                    first_classifier_spike_valid_live <= 1'b1;
+                    first_classifier_spike_id_live    <= first_classifier_spike_candidate;
+                    first_classifier_spike_cycle_snapshot <= first_classifier_spike_cycle_live;
+                end
+
+                if (PROFILE_CLASS_ENABLE &&
+                    profile_group_event_valid_d && profile_group_event_class_valid_d)
+                    bump_class_count(profile_group_event_class_id_d);
+
+                if (PROFILE_CLASS_ENABLE && profile_class_valid_d)
+                    bump_class_score_event(profile_class_id_d, profile_class_weight_d);
+
+                if (ENABLE_PROFILE_PER_GROUP &&
+                    profile_group_event_valid_d && profile_group_event_input_source_d) begin
+                    case (profile_group_event_group_d)
+                        4'd0:  input_source_group_count_live[0]  <= input_source_group_count_live[0] + 1'b1;
+                        4'd1:  input_source_group_count_live[1]  <= input_source_group_count_live[1] + 1'b1;
+                        4'd2:  input_source_group_count_live[2]  <= input_source_group_count_live[2] + 1'b1;
+                        4'd3:  input_source_group_count_live[3]  <= input_source_group_count_live[3] + 1'b1;
+                        4'd4:  input_source_group_count_live[4]  <= input_source_group_count_live[4] + 1'b1;
+                        4'd5:  input_source_group_count_live[5]  <= input_source_group_count_live[5] + 1'b1;
+                        4'd6:  input_source_group_count_live[6]  <= input_source_group_count_live[6] + 1'b1;
+                        4'd7:  input_source_group_count_live[7]  <= input_source_group_count_live[7] + 1'b1;
+                        4'd8:  input_source_group_count_live[8]  <= input_source_group_count_live[8] + 1'b1;
+                        4'd9:  input_source_group_count_live[9]  <= input_source_group_count_live[9] + 1'b1;
+                        4'd10: input_source_group_count_live[10] <= input_source_group_count_live[10] + 1'b1;
+                        4'd11: input_source_group_count_live[11] <= input_source_group_count_live[11] + 1'b1;
+                        4'd12: input_source_group_count_live[12] <= input_source_group_count_live[12] + 1'b1;
+                        4'd13: input_source_group_count_live[13] <= input_source_group_count_live[13] + 1'b1;
+                        4'd14: input_source_group_count_live[14] <= input_source_group_count_live[14] + 1'b1;
+                        4'd15: input_source_group_count_live[15] <= input_source_group_count_live[15] + 1'b1;
+                        default: begin
+                        end
+                    endcase
+                    input_source_bitmap_live[profile_group_event_pixel_d] <= 1'b1;
+                end
+
+                if (ENABLE_PROFILE_DETAIL && profile_fanout_input_source_valid_d)
+                    input_source_ct_bitmap_live[profile_fanout_input_source_pixel_d] <= 1'b1;
+
+                if (PROFILE_CLASS_ENABLE || ENABLE_PROFILE_PER_GROUP) begin
+                    profile_group_event_valid_d <= profile_group_event_valid_comb;
+                    profile_group_event_group_d <= profile_group_event_group_comb;
+                    profile_group_event_class_valid_d <= profile_group_event_class_valid_comb;
+                    profile_group_event_class_id_d <= profile_group_event_class_id_comb;
+                    profile_group_event_input_source_d <= profile_group_event_input_source_comb;
+                    profile_group_event_pixel_d <= profile_group_event_pixel_comb;
+                end else begin
+                    profile_group_event_valid_d <= 1'b0;
+                    profile_group_event_group_d <= {GROUP_ID_WIDTH{1'b0}};
+                    profile_group_event_class_valid_d <= 1'b0;
+                    profile_group_event_class_id_d <= 4'd0;
+                    profile_group_event_input_source_d <= 1'b0;
+                    profile_group_event_pixel_d <= {PROFILE_INPUT_SOURCE_PIXEL_WIDTH{1'b0}};
+                end
+                if (PROFILE_CLASS_ENABLE) begin
+                    profile_class_valid_d <= router_profile_class_valid;
+                    profile_class_id_d <= router_profile_class_id;
+                    profile_class_weight_d <= router_profile_class_weight;
+                    profile_fanout_input_source_valid_d <= profile_fanout_input_source_valid_comb;
+                    profile_fanout_input_source_pixel_d <= profile_fanout_input_source_pixel_comb;
+                end else begin
+                    profile_class_valid_d <= 1'b0;
+                    profile_class_id_d <= 4'd0;
+                    profile_class_weight_d <= {WEIGHT_WIDTH{1'b0}};
+                    profile_fanout_input_source_valid_d <= 1'b0;
+                    profile_fanout_input_source_pixel_d <= {PROFILE_INPUT_SOURCE_PIXEL_WIDTH{1'b0}};
+                end
+
                 if (sample_seen_input && !sample_service_done && sample_input_done &&
                     !hls_ext_pending && !router_busy && (grp_busy == {NUM_GROUPS{1'b0}})) begin
                     sample_service_done <= 1'b1;
                     service_cycles_snapshot <= service_cycles_live;
                 end
             end
-            if (cfg_profile_stop) begin
+            if (profile_stop_local) begin
                 profile_active         <= 1'b0;
                 profile_done           <= 1'b1;
                 total_latency_snapshot <= total_latency_live;
                 if (!sample_service_done)
                     service_cycles_snapshot <= service_cycles_live;
+                if (PROFILE_CLASS_ENABLE) begin
+                    first_classifier_spike_valid_snapshot <= first_classifier_spike_valid_live;
+                    first_classifier_spike_id_snapshot    <= first_classifier_spike_id_live;
+                    if (!first_classifier_spike_valid_live)
+                        first_classifier_spike_cycle_snapshot <= first_classifier_spike_cycle_live;
+                    for (class_count_i = 0; class_count_i < NUM_CLASSES; class_count_i = class_count_i + 1)
+                        classifier_class_count_snapshot[class_count_i] <= classifier_class_count_live[class_count_i];
+                    for (class_count_i = 0; class_count_i < NUM_CLASSES; class_count_i = class_count_i + 1) begin
+                        classifier_class_score_snapshot[class_count_i] <= classifier_class_score_live[class_count_i];
+                        classifier_class_event_snapshot[class_count_i] <= classifier_class_event_live[class_count_i];
+                    end
+                end
+                if (ENABLE_PROFILE_PER_GROUP) begin
+                    for (class_count_i = 0; class_count_i < NUM_GROUPS; class_count_i = class_count_i + 1)
+                        input_source_group_count_snapshot[class_count_i] <= input_source_group_count_live[class_count_i];
+                    input_source_bitmap_snapshot <= input_source_bitmap_live;
+                end
+                if (ENABLE_PROFILE_DETAIL)
+                    input_source_ct_bitmap_snapshot <= input_source_ct_bitmap_live;
             end
         end
     end
@@ -443,12 +895,69 @@ module snn_core_group_top #(
     always @(*) begin
         cfg_profile_data = 32'd0;
         profile_sel = cfg_profile_index;
-        if (profile_sel == 10)
-            cfg_profile_data = total_latency_snapshot;
-        else if (profile_sel < PROFILE_ROUTER_TOTAL_COUNT)
-            cfg_profile_data = router_profile_snapshot[profile_sel*32 +: 32];
-        else if (profile_sel < PROFILE_TOTAL_COUNT)
-            cfg_profile_data = grp_profile_snapshot[(profile_sel-PROFILE_CORE_BASE)*32 +: 32];
+        if (PROFILE_BASIC_ONLY) begin
+            case (profile_sel)
+                0: cfg_profile_data = total_latency_snapshot;
+                1: cfg_profile_data = router_profile_snapshot[2*32 +: 32]; // ct_lookup_count
+                2: cfg_profile_data = router_profile_snapshot[3*32 +: 32]; // ct_valid_entry_count
+                3: cfg_profile_data = router_profile_snapshot[5*32 +: 32]; // router_busy_cycles
+                4: cfg_profile_data = router_profile_snapshot[7*32 +: 32]; // router_stall_cycles
+                5: cfg_profile_data = router_profile_snapshot[8*32 +: 32]; // cross_group_event_count
+                6: cfg_profile_data = router_profile_snapshot[9*32 +: 32]; // same_group_event_count
+                7: cfg_profile_data = basic_intra_weight_lookup_sum;
+                8: cfg_profile_data = basic_intra_weight_nonzero_sum;
+                9: cfg_profile_data = basic_intra_fifo_blocked_sum;
+                10: cfg_profile_data = basic_drop_spike_sum;
+                default: cfg_profile_data = 32'd0;
+            endcase
+            if (profile_sel >= PROFILE_BASIC_CLASS_COUNT_BASE &&
+                profile_sel < PROFILE_BASIC_CLASS_SCORE_BASE)
+                cfg_profile_data = classifier_class_count_snapshot[
+                    profile_sel-PROFILE_BASIC_CLASS_COUNT_BASE
+                ];
+            else if (profile_sel >= PROFILE_BASIC_CLASS_SCORE_BASE &&
+                     profile_sel < PROFILE_BASIC_CLASS_EVENT_BASE)
+                cfg_profile_data = classifier_class_score_snapshot[
+                    profile_sel-PROFILE_BASIC_CLASS_SCORE_BASE
+                ];
+            else if (profile_sel >= PROFILE_BASIC_CLASS_EVENT_BASE &&
+                     profile_sel < PROFILE_BASIC_COUNT)
+                cfg_profile_data = classifier_class_event_snapshot[
+                    profile_sel-PROFILE_BASIC_CLASS_EVENT_BASE
+                ];
+        end else begin
+            if (profile_sel == 10)
+                cfg_profile_data = total_latency_snapshot;
+            else if (profile_sel < PROFILE_ROUTER_TOTAL_COUNT)
+                cfg_profile_data = router_profile_snapshot[profile_sel*32 +: 32];
+            else if (profile_sel < PROFILE_TOTAL_COUNT)
+                if (profile_sel < PROFILE_CLASSIFIER_BASE)
+                    cfg_profile_data = grp_profile_snapshot[(profile_sel-PROFILE_CORE_BASE)*32 +: 32];
+                else if (profile_sel == PROFILE_CLASSIFIER_BASE)
+                    cfg_profile_data = {31'd0, first_classifier_spike_valid_snapshot};
+                else if (profile_sel == PROFILE_CLASSIFIER_BASE + 1)
+                    cfg_profile_data = {{(32-GLOBAL_ID_WIDTH){1'b0}}, first_classifier_spike_id_snapshot};
+                else if (profile_sel == PROFILE_CLASSIFIER_BASE + 2)
+                    cfg_profile_data = first_classifier_spike_cycle_snapshot;
+                else if (profile_sel < PROFILE_CLASS_SCORE_BASE)
+                    cfg_profile_data = classifier_class_count_snapshot[profile_sel-PROFILE_CLASS_COUNT_BASE];
+                else if (profile_sel < PROFILE_CLASS_EVENT_BASE)
+                    cfg_profile_data = classifier_class_score_snapshot[profile_sel-PROFILE_CLASS_SCORE_BASE];
+                else if (profile_sel < PROFILE_INPUT_SOURCE_GROUP_BASE)
+                    cfg_profile_data = classifier_class_event_snapshot[profile_sel-PROFILE_CLASS_EVENT_BASE];
+                else if (profile_sel < PROFILE_INPUT_SOURCE_BITMAP_BASE)
+                    cfg_profile_data = input_source_group_count_snapshot[profile_sel-PROFILE_INPUT_SOURCE_GROUP_BASE];
+                else if (profile_sel < PROFILE_TOTAL_COUNT) begin
+                    if (profile_sel < PROFILE_INPUT_SOURCE_CT_BITMAP_BASE)
+                        cfg_profile_data = input_source_bitmap_snapshot[
+                            (profile_sel-PROFILE_INPUT_SOURCE_BITMAP_BASE)*32 +: 32
+                        ];
+                    else
+                        cfg_profile_data = input_source_ct_bitmap_snapshot[
+                            (profile_sel-PROFILE_INPUT_SOURCE_CT_BITMAP_BASE)*32 +: 32
+                        ];
+                end
+        end
     end
 
     //=========================================================================
@@ -811,8 +1320,8 @@ module snn_core_group_top #(
                 .group_busy         (grp_busy[g]),
                 .profile_active     (profile_active),
                 .profile_start      (cfg_profile_start),
-                .profile_stop       (cfg_profile_stop),
-                .profile_snapshot   (grp_profile_snapshot[g*5*32 +: 5*32])
+                .profile_stop       (profile_stop_local),
+                .profile_snapshot   (grp_profile_snapshot[g*PROFILE_CORE_METRIC_COUNT*32 +: PROFILE_CORE_METRIC_COUNT*32])
             );
         end
     endgenerate
@@ -886,7 +1395,11 @@ module snn_core_group_top #(
         .NUM_GROUPS         (NUM_GROUPS),
         .NEURONS_PER_GROUP  (NEURONS_PER_GROUP),
         .WEIGHT_WIDTH       (WEIGHT_WIDTH),
-        .MAX_FANOUT_INTER   (MAX_FANOUT_INTER)
+        .MAX_FANOUT_INTER   (MAX_FANOUT_INTER),
+        .CLASSIFIER_NEURONS (CLASSIFIER_NEURONS),
+        .INPUT_SOURCE_NEURONS(INPUT_SOURCE_NEURONS),
+        .NUM_CLASSES        (NUM_CLASSES),
+        .FPS_PER_CLASS      (FPS_PER_CLASS)
     ) u_event_router (
         .clk                (clk_100mhz),
         .rst_n              (rst_n_sync & ~hls_snn_reset),
@@ -962,9 +1475,18 @@ module snn_core_group_top #(
         // Status
         .routed_spike_count (routed_spike_count),
         .router_busy        (router_busy),
+        .profile_fanout_valid     (router_profile_fanout_valid),
+        .profile_fanout_src_group (router_profile_fanout_src_group),
+        .profile_fanout_src_neuron(router_profile_fanout_src_neuron),
+        .profile_fanout_dst_group (router_profile_fanout_dst_group),
+        .profile_fanout_dst_neuron(router_profile_fanout_dst_neuron),
+        .profile_fanout_weight    (router_profile_fanout_weight),
+        .profile_class_valid      (router_profile_class_valid),
+        .profile_class_id         (router_profile_class_id),
+        .profile_class_weight     (router_profile_class_weight),
         .profile_active     (profile_active),
         .profile_start      (cfg_profile_start),
-        .profile_stop       (cfg_profile_stop),
+        .profile_stop       (profile_stop_local),
         .profile_snapshot   (router_profile_snapshot)
     );
 

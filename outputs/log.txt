@@ -1,0 +1,114 @@
+========================================================================
+10-Class MNIST FPGA Inference  (core-group/profile route)
+========================================================================
+
+Loading: /home/xilinx/snn/mnist_10class_deployment.npz
+  q_weights: (150, 784)  hw_threshold: 120
+  n_neurons: 150  n_classes: 10  fps: 15
+  Test images: 100
+  Neuron map: round-robin  used_groups=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+  Neuron map group counts: [59, 59, 59, 59, 59, 59, 58, 58, 58, 58, 58, 58, 58, 58, 58, 58]
+  CT mode: real-random25  dummy_weight=0 density=0.250 real_density=0.250 seed=1
+  CT dummy sink ids: [(0, 127), (1, 255), (2, 383), (3, 511), (4, 639), (5, 767), (6, 895), (7, 1023), (8, 1151), (9, 1279), (10, 1407), (11, 1535), (12, 1663), (13, 1791), (14, 1919), (15, 2047)]
+
+Programming FPGA: /home/xilinx/snn/snn_core_group_profile.bit
+  bit鈫抌in: snn_core_group_profile.bit 鈫? snn_core_group_profile.bin
+  fpga_manager state: operating
+  HLS packet_id_width: 13  apnone_id_width: 11
+  Core-group ID split: group_id_width=4 local_id_width=7
+  Input mapping: logical neuron_id -> hardware global neuron_id (round-robin), no source_offset
+  PL clock for latency conversion: 100000000 Hz (100.000000 MHz)
+  S2MM capture mode: first-spike-only
+  snn_config_regs version: 0x534E4E01  (OK)
+  hls version_reg: (SKIPPED; use --check-hls-version to enable)
+  profile info: 0x0A100029  version=10 groups=16 counters=41
+
+Warm-up HLS control path ...
+  Done.
+
+Programming core-group route (150 direct external targets) ...
+  Done. CT invalid terminators=784 valid_entries=11015 expected_dummy_entries=0 cross_entries=11015 same_entries=0 intra_mode=split-same-group intra_nonzero_entries=745 intra_zero_writes=100352 config_ms=11762.295
+  Real CT: pre_prune_entries=29302 programmed=11015 truncated=17542 overflow_sources=784 policy=topk intra=split-same-group->split-same-group intra_nonzero=745
+
+Runtime interface diagnostics:
+  HWH: /home/xilinx/snn/snn_core_group_profile.hwh
+  HLS MODTYPE: snn_inference_profile_hls  VLNV: xilinx.com:hls:snn_inference_profile_hls:1.0
+  HWH ports: apnone_id_width=11 axi_dma_1=0 weight_stream=0 learn_weight=0 s_axis_data=0
+  CFG_STATUS=0x00000008: router_busy=0 group_busy=0 rtl_ready=1 profile_active=0 profile_done=0 overflow=0 active_neurons=0
+  HLS_STATUS=0x00000001: ready=1 busy=0 first_only=0 mode=0 pending=0
+  DMA status: MM2S_DMASR=0x00000001 S2MM_DMASR=0x00000001
+  Counters: router=0 neuron=0 hls_in=0 latency=0 service=0
+  PROFILE_INFO=0x0A100029: version=10 groups=16 counters=41
+  NOTE: real CT mode forces all-spikes capture so input-source spikes can be filtered in Python.
+  MM2S buffer: WARNING falling back to fixed /dev/mem 0x1F000000 bytes=3928 (name 'allocate' is not defined)
+  S2MM buffer: WARNING falling back to fixed /dev/mem 0x1F100000 bytes=3928 (name 'allocate' is not defined)
+
+Running 100 inferences ...
+----------------------------------------------------------------------------------------------------
+  idx  lbl  sw_t  sw_c sw_ct   hw  src   acc  cteq |  router  neuron  hls_in    lat    svc       mm2s       s2mm      cfg  #s2
+----------------------------------------------------------------------------------------------------
+    0    7     7     7     7    7  C+S    OK     Y |    1237     411      82     13  68268 0x00001002 0x00001002 0x000028   12
+   99    9     9     9     9    9  C+S    OK     Y |    2033     768     136     13 114475 0x00001002 0x00001002 0x000028   18
+====================================================================================================
+
+Results (100 images, 10.7s, 107.1ms/img):
+  SW TTFS acc:             87/100 (87.00%)
+  SW CT-pruned acc:        74/100 (74.00%)
+  HW vs SW CT-pruned:      94/100 (94.00%)
+  HW count+score vs SW:    94/100 (94.00%)
+  HW count+score vs SW-HWCT:94/100 (94.00%)
+  Input-source group hist: hw=0 sw=10939 mismatch=100/100
+  Input-source CT bitmap:  consumed=0 fired_minus_consumed=0
+  HW acc confirmed path:   73/100 (73.00%)
+  S2MM first-spike acc:    12/100 (12.00%)
+  HW pred source:          count+score=100, score=0, count=0, rtl=0, s2mm=100, fallback=0
+  Total input words:       10939
+  Total router deliveries: 164207 (1501.12% of input)
+  Total neuron fires:      61360 (560.93% of input)
+  HLS input incomplete:    0/100
+  Profile incomplete:      0/100
+  Communication profile totals:
+    router_busy_cycles:    5025285
+    router_stall_cycles:   3879846
+    total_latency_cycles:  81984650
+    out_fifo_drop_count:   0
+
+  CT mode check (real-random25):
+    unavailable in BASIC profile mode (output/invalid/per-group detail counters are hidden)
+    ct_lookup_count:       214628
+    ct_valid_entry_count:  153268
+    cross_group_event_count:153268
+    same_group_event_count: 0
+  PL-only latency (first input->first output): mean=13.0 cyc (0.0001 ms), min=13 cyc (0.0001 ms), max=13 cyc (0.0001 ms) @ 100.000000 MHz
+  PL-only service time (first input->idle): mean=77375.9 cyc (0.7738 ms), min=23130 cyc (0.2313 ms), max=204004 cyc (2.0400 ms) @ 100.000000 MHz
+  PL-only throughput (first-spike window): 7692307.69 img/s
+  PL-only throughput (service window): 1292.39 img/s
+
+  Timing decomposition (per image, host-side measured):
+    iter_wall_ms_mean:    106.645484
+    sw_ref_ms_mean:       1.696502
+    reset_ms_mean:        2.377053
+    spike_pack_ms_mean:   0.549727
+    hw_run_ms_mean:       17.261935
+      dma_reset_ms_mean:  4.237332
+      stream_poll_ms_mean:6.302260
+      mm2s_tail_ms_mean:  0.002520
+      hls_input_ms_mean:  0.042917
+      settle_ms_mean:     1.675672
+      stop_ms_mean:       3.439373
+      readback_ms_mean:   0.120341
+      tracked_sleep_ms:   8.200000
+    non_pl_overhead_ms_mean (iter - pl_service): 105.871725 (99.2745% of iter)
+
+Runtime interface diagnostics:
+  HWH: /home/xilinx/snn/snn_core_group_profile.hwh
+  HLS MODTYPE: snn_inference_profile_hls  VLNV: xilinx.com:hls:snn_inference_profile_hls:1.0
+  HWH ports: apnone_id_width=11 axi_dma_1=0 weight_stream=0 learn_weight=0 s_axis_data=0
+  CFG_STATUS=0x00000028: router_busy=0 group_busy=0 rtl_ready=1 profile_active=0 profile_done=1 overflow=0 active_neurons=0
+  HLS_STATUS=0x00000001: ready=1 busy=0 first_only=0 mode=0 pending=0
+  DMA status: MM2S_DMASR=0x00001002 S2MM_DMASR=0x00000000
+  Counters: router=164207 neuron=61360 hls_in=136 latency=13 service=114475
+  PROFILE_INFO=0x0A100029: version=10 groups=16 counters=41
+
+Saved: /home/xilinx/snn/mnist_10class_coregroup_results.json
+Saved profile CSV: /home/xilinx/snn/profile_coregroup.csv

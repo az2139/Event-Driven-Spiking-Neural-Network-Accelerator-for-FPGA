@@ -79,7 +79,7 @@ module core_group #(
     input  wire                         profile_active,
     input  wire                         profile_start,
     input  wire                         profile_stop,
-    output wire [5*32-1:0]              profile_snapshot
+    output wire [6*32-1:0]              profile_snapshot
 );
 
     //=========================================================================
@@ -242,27 +242,28 @@ module core_group #(
     //   2: intra_weight_nonzero_count
     //   3: intra_fifo_push_count
     //   4: intra_fifo_blocked_event_count
+    //   5: out_fifo_overflow_drop_count
     //=========================================================================
-    reg [31:0] profile_live [0:4];
-    reg [31:0] profile_snap [0:4];
+    reg [31:0] profile_live [0:5];
+    reg [31:0] profile_snap [0:5];
     integer profile_i;
 
     generate
         genvar profile_g;
-        for (profile_g = 0; profile_g < 5; profile_g = profile_g + 1) begin : gen_profile_snapshot
+        for (profile_g = 0; profile_g < 6; profile_g = profile_g + 1) begin : gen_profile_snapshot
             assign profile_snapshot[profile_g*32 +: 32] = profile_snap[profile_g];
         end
     endgenerate
 
     always @(posedge clk) begin
         if (!rst_n) begin
-            for (profile_i = 0; profile_i < 5; profile_i = profile_i + 1) begin
+            for (profile_i = 0; profile_i < 6; profile_i = profile_i + 1) begin
                 profile_live[profile_i] <= 32'd0;
                 profile_snap[profile_i] <= 32'd0;
             end
         end else begin
             if (profile_start) begin
-                for (profile_i = 0; profile_i < 5; profile_i = profile_i + 1)
+                for (profile_i = 0; profile_i < 6; profile_i = profile_i + 1)
                     profile_live[profile_i] <= 32'd0;
             end else if (profile_active) begin
                 if (state == ST_SPIKE_WR && sp_fired)
@@ -275,9 +276,11 @@ module core_group #(
                     profile_live[3] <= profile_live[3] + 1'b1;
                 if (state == ST_INTRA_ROUTE && wm_weight != 0 && fifo_full)
                     profile_live[4] <= profile_live[4] + 1'b1;
+                if (state == ST_SPIKE_WR && sp_fired && out_fifo_full)
+                    profile_live[5] <= profile_live[5] + 1'b1;
             end
             if (profile_stop) begin
-                for (profile_i = 0; profile_i < 5; profile_i = profile_i + 1)
+                for (profile_i = 0; profile_i < 6; profile_i = profile_i + 1)
                     profile_snap[profile_i] <= profile_live[profile_i];
             end
         end
