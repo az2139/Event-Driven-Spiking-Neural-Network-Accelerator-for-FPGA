@@ -57,7 +57,8 @@
 //     [17:10] = weight     (8-bit unsigned magnitude)
 //     [9]     = exc
 //     [8:5]   = group_id   (4-bit, supports up to 16 groups)
-//     [4:0]   = reserved
+//     [4]     = reserved
+//     [3:0]   = sparse fanout_idx (ignored by dense weight_mem)
 //
 // Resource Budget (xc7z020clg400-2):
 //   - 16 Core Groups:      ~48 BRAM36, ~9,120 LUT
@@ -106,7 +107,14 @@ module snn_core_group_top #(
     // debug windows when explicitly enabled for bring-up.
     parameter ENABLE_PROFILE_BASIC     = 1,
     parameter ENABLE_PROFILE_DETAIL    = 0,
-    parameter ENABLE_PROFILE_PER_GROUP = 0
+    parameter ENABLE_PROFILE_PER_GROUP = 0,
+
+    // Intra-group recurrent fanout implementation switches. Stage 1 keeps the
+    // sparse table instantiated/writable while the sparse routing FSM is added
+    // in a later step.
+    parameter ENABLE_INTRA_SPARSE      = 1,
+    parameter ENABLE_INTRA_DENSE       = 0,
+    parameter INTRA_MAX_FANOUT         = MAX_FANOUT_INTER
 )(
     //-------------------------------------------------------------------------
     // DDR Interface (directly from PS)
@@ -161,9 +169,22 @@ module snn_core_group_top #(
     reg                             hls_spike_out_toggle_d;
     wire                            hls_spike_out_pulse;
     wire                            router_ext_spike_ready;
-    reg                             hls_ext_pending;
-    reg  [GLOBAL_ID_WIDTH-1:0]      hls_ext_pending_id;
-    reg  [WEIGHT_WIDTH-1:0]         hls_ext_pending_weight;
+    localparam EXT_INPUT_FIFO_DEPTH = 32;
+    localparam EXT_INPUT_FIFO_AW    = $clog2(EXT_INPUT_FIFO_DEPTH);
+    localparam [EXT_INPUT_FIFO_AW:0] EXT_INPUT_FIFO_DEPTH_COUNT = EXT_INPUT_FIFO_DEPTH;
+    wire                            hls_ext_pending;
+    wire [GLOBAL_ID_WIDTH-1:0]      hls_ext_pending_id;
+    wire [WEIGHT_WIDTH-1:0]         hls_ext_pending_weight;
+    reg  [GLOBAL_ID_WIDTH-1:0]      ext_input_fifo_id [0:EXT_INPUT_FIFO_DEPTH-1];
+    reg  [WEIGHT_WIDTH-1:0]         ext_input_fifo_weight [0:EXT_INPUT_FIFO_DEPTH-1];
+    reg  [EXT_INPUT_FIFO_AW-1:0]    ext_input_fifo_wr_ptr;
+    reg  [EXT_INPUT_FIFO_AW-1:0]    ext_input_fifo_rd_ptr;
+    reg  [EXT_INPUT_FIFO_AW:0]      ext_input_fifo_count;
+    wire                            ext_input_fifo_empty;
+    wire                            ext_input_fifo_full;
+    wire                            ext_input_fifo_push;
+    wire                            ext_input_fifo_pop;
+    integer                         ext_fifo_i;
 
     wire                            rtl_spike_out_valid;
     wire [HLS_NEURON_ID_WIDTH-1:0]  rtl_spike_out_neuron_id;
@@ -247,7 +268,7 @@ module snn_core_group_top #(
     // Core group status
     wire [NUM_GROUPS*32-1:0]                    grp_spike_count;
     wire [NUM_GROUPS-1:0]                       grp_busy;
-    wire [NUM_GROUPS*6*32-1:0]                  grp_profile_snapshot;
+    wire [NUM_GROUPS*8*32-1:0]                  grp_profile_snapshot;
 
     //=========================================================================
     // Internal Wiring: Event Router <-> Connectivity Table
@@ -423,7 +444,7 @@ module snn_core_group_top #(
     //=========================================================================
     localparam PROFILE_ROUTER_TOTAL_COUNT  = 11 + 2*NUM_GROUPS + 2*NUM_CLASSES;
     localparam PROFILE_CORE_BASE           = PROFILE_ROUTER_TOTAL_COUNT;
-    localparam PROFILE_CORE_METRIC_COUNT   = 6;
+    localparam PROFILE_CORE_METRIC_COUNT   = 8;
     localparam PROFILE_CLASSIFIER_BASE     = PROFILE_CORE_BASE + PROFILE_CORE_METRIC_COUNT*NUM_GROUPS;
     localparam PROFILE_CLASS_COUNT_BASE    = PROFILE_CLASSIFIER_BASE + 3;
     localparam PROFILE_CLASS_SCORE_BASE    = PROFILE_CLASS_COUNT_BASE + NUM_CLASSES;
@@ -435,7 +456,7 @@ module snn_core_group_top #(
     localparam PROFILE_INPUT_SOURCE_PIXEL_WIDTH = $clog2(INPUT_SOURCE_NEURONS);
     localparam PROFILE_INPUT_SOURCE_CT_BITMAP_BASE = PROFILE_INPUT_SOURCE_BITMAP_BASE + PROFILE_INPUT_SOURCE_BITMAP_WORDS;
     localparam PROFILE_FULL_COUNT          = PROFILE_INPUT_SOURCE_CT_BITMAP_BASE + PROFILE_INPUT_SOURCE_BITMAP_WORDS;
-    localparam PROFILE_BASIC_SCALAR_COUNT = 11;
+    localparam PROFILE_BASIC_SCALAR_COUNT = 10;
     localparam PROFILE_BASIC_CLASS_COUNT_BASE = PROFILE_BASIC_SCALAR_COUNT;
     localparam PROFILE_BASIC_CLASS_SCORE_BASE = PROFILE_BASIC_CLASS_COUNT_BASE + NUM_CLASSES;
     localparam PROFILE_BASIC_CLASS_EVENT_BASE = PROFILE_BASIC_CLASS_SCORE_BASE + NUM_CLASSES;
@@ -449,7 +470,7 @@ module snn_core_group_top #(
     localparam PROFILE_TOTAL_COUNT         = PROFILE_BASIC_ONLY ? PROFILE_BASIC_COUNT : PROFILE_FULL_COUNT;
     localparam [7:0] PROFILE_NUM_GROUPS_INFO = NUM_GROUPS;
     localparam [15:0] PROFILE_TOTAL_COUNT_INFO = PROFILE_TOTAL_COUNT;
-    localparam [7:0] PROFILE_VERSION_INFO = PROFILE_BASIC_ONLY ? 8'h0A : 8'h09;
+    localparam [7:0] PROFILE_VERSION_INFO = PROFILE_BASIC_ONLY ? 8'h0C : 8'h09;
 
     reg        profile_active;
     reg        profile_done;
@@ -465,6 +486,12 @@ module snn_core_group_top #(
     reg        sample_service_done;
     reg        sample_seen_input;
     reg        sample_seen_output;
+    reg [31:0] service_dbg_input_done_cycle_live;
+    reg [31:0] service_dbg_input_done_cycle_snapshot;
+    reg [31:0] service_dbg_hls_pending_clear_cycle_live;
+    reg [31:0] service_dbg_hls_pending_clear_cycle_snapshot;
+    reg        service_dbg_input_done_seen;
+    reg        service_dbg_hls_pending_clear_seen;
     reg        first_classifier_spike_valid_live;
     reg        first_classifier_spike_valid_snapshot;
     reg [GLOBAL_ID_WIDTH-1:0] first_classifier_spike_id_live;
@@ -503,9 +530,6 @@ module snn_core_group_top #(
     reg [PROFILE_INPUT_SOURCE_PIXEL_WIDTH-1:0] profile_fanout_input_source_pixel_comb;
     reg        profile_fanout_input_source_valid_d;
     reg [PROFILE_INPUT_SOURCE_PIXEL_WIDTH-1:0] profile_fanout_input_source_pixel_d;
-    reg [31:0] basic_intra_weight_lookup_sum;
-    reg [31:0] basic_intra_weight_nonzero_sum;
-    reg [31:0] basic_intra_fifo_blocked_sum;
     reg [31:0] basic_drop_spike_sum;
     integer profile_sel;
     integer class_count_i;
@@ -514,20 +538,8 @@ module snn_core_group_top #(
     integer basic_profile_gi;
 
     always @(*) begin
-        basic_intra_weight_lookup_sum = 32'd0;
-        basic_intra_weight_nonzero_sum = 32'd0;
-        basic_intra_fifo_blocked_sum = 32'd0;
         basic_drop_spike_sum = 32'd0;
         for (basic_profile_gi = 0; basic_profile_gi < NUM_GROUPS; basic_profile_gi = basic_profile_gi + 1) begin
-            basic_intra_weight_lookup_sum =
-                basic_intra_weight_lookup_sum +
-                grp_profile_snapshot[(basic_profile_gi*PROFILE_CORE_METRIC_COUNT + 1)*32 +: 32];
-            basic_intra_weight_nonzero_sum =
-                basic_intra_weight_nonzero_sum +
-                grp_profile_snapshot[(basic_profile_gi*PROFILE_CORE_METRIC_COUNT + 2)*32 +: 32];
-            basic_intra_fifo_blocked_sum =
-                basic_intra_fifo_blocked_sum +
-                grp_profile_snapshot[(basic_profile_gi*PROFILE_CORE_METRIC_COUNT + 4)*32 +: 32];
             basic_drop_spike_sum =
                 basic_drop_spike_sum +
                 grp_profile_snapshot[(basic_profile_gi*PROFILE_CORE_METRIC_COUNT + 5)*32 +: 32];
@@ -682,6 +694,12 @@ module snn_core_group_top #(
             sample_service_done          <= 1'b0;
             sample_seen_input            <= 1'b0;
             sample_seen_output           <= 1'b0;
+            service_dbg_input_done_cycle_live <= 32'd0;
+            service_dbg_input_done_cycle_snapshot <= 32'd0;
+            service_dbg_hls_pending_clear_cycle_live <= 32'd0;
+            service_dbg_hls_pending_clear_cycle_snapshot <= 32'd0;
+            service_dbg_input_done_seen <= 1'b0;
+            service_dbg_hls_pending_clear_seen <= 1'b0;
             first_classifier_spike_valid_live     <= 1'b0;
             first_classifier_spike_valid_snapshot <= 1'b0;
             first_classifier_spike_id_live        <= {GLOBAL_ID_WIDTH{1'b0}};
@@ -731,6 +749,12 @@ module snn_core_group_top #(
                 sample_service_done          <= 1'b0;
                 sample_seen_input            <= 1'b0;
                 sample_seen_output           <= 1'b0;
+                service_dbg_input_done_cycle_live <= 32'd0;
+                service_dbg_input_done_cycle_snapshot <= 32'd0;
+                service_dbg_hls_pending_clear_cycle_live <= 32'd0;
+                service_dbg_hls_pending_clear_cycle_snapshot <= 32'd0;
+                service_dbg_input_done_seen <= (cfg_profile_expected_count == 16'd0);
+                service_dbg_hls_pending_clear_seen <= 1'b0;
                 first_classifier_spike_valid_live     <= 1'b0;
                 first_classifier_spike_valid_snapshot <= 1'b0;
                 first_classifier_spike_id_live        <= {GLOBAL_ID_WIDTH{1'b0}};
@@ -781,6 +805,18 @@ module snn_core_group_top #(
                         first_spike_latency_live <= first_spike_latency_live + 1'b1;
                     if (!first_classifier_spike_valid_live)
                         first_classifier_spike_cycle_live <= first_classifier_spike_cycle_live + 1'b1;
+                end
+                if (sample_seen_input && !service_dbg_input_done_seen &&
+                    (sample_input_done ||
+                     (hls_spike_out_pulse && cfg_profile_expected_count != 16'd0 &&
+                      (sample_input_count + 1'b1 >= cfg_profile_expected_count)))) begin
+                    service_dbg_input_done_seen <= 1'b1;
+                    service_dbg_input_done_cycle_live <= service_cycles_live;
+                end
+                if (sample_seen_input && sample_input_done &&
+                    !service_dbg_hls_pending_clear_seen && !hls_ext_pending) begin
+                    service_dbg_hls_pending_clear_seen <= 1'b1;
+                    service_dbg_hls_pending_clear_cycle_live <= service_cycles_live;
                 end
                 if (sample_seen_input && !sample_seen_output && rtl_spike_out_valid) begin
                     sample_seen_output <= 1'b1;
@@ -869,6 +905,8 @@ module snn_core_group_top #(
                 total_latency_snapshot <= total_latency_live;
                 if (!sample_service_done)
                     service_cycles_snapshot <= service_cycles_live;
+                service_dbg_input_done_cycle_snapshot <= service_dbg_input_done_cycle_live;
+                service_dbg_hls_pending_clear_cycle_snapshot <= service_dbg_hls_pending_clear_cycle_live;
                 if (PROFILE_CLASS_ENABLE) begin
                     first_classifier_spike_valid_snapshot <= first_classifier_spike_valid_live;
                     first_classifier_spike_id_snapshot    <= first_classifier_spike_id_live;
@@ -904,10 +942,9 @@ module snn_core_group_top #(
                 4: cfg_profile_data = router_profile_snapshot[7*32 +: 32]; // router_stall_cycles
                 5: cfg_profile_data = router_profile_snapshot[8*32 +: 32]; // cross_group_event_count
                 6: cfg_profile_data = router_profile_snapshot[9*32 +: 32]; // same_group_event_count
-                7: cfg_profile_data = basic_intra_weight_lookup_sum;
-                8: cfg_profile_data = basic_intra_weight_nonzero_sum;
-                9: cfg_profile_data = basic_intra_fifo_blocked_sum;
-                10: cfg_profile_data = basic_drop_spike_sum;
+                7: cfg_profile_data = basic_drop_spike_sum;
+                8: cfg_profile_data = service_dbg_input_done_cycle_snapshot;
+                9: cfg_profile_data = service_dbg_hls_pending_clear_cycle_snapshot;
                 default: cfg_profile_data = 32'd0;
             endcase
             if (profile_sel >= PROFILE_BASIC_CLASS_COUNT_BASE &&
@@ -984,6 +1021,7 @@ module snn_core_group_top #(
     reg [LOCAL_ID_WIDTH-1:0]     intra_weight_dst_reg;
     reg [WEIGHT_WIDTH-1:0]       intra_weight_data_reg;
     reg                          intra_weight_exc_reg;
+    reg [FANOUT_IDX_WIDTH-1:0]   intra_weight_fanout_idx_reg;
 
     always @(posedge clk_100mhz) begin
         if (!rst_n_sync) begin
@@ -1014,6 +1052,7 @@ module snn_core_group_top #(
                         intra_weight_dst_reg  <= cfg_router_config_wdata[24:18];
                         intra_weight_data_reg <= cfg_router_config_wdata[17:10];
                         intra_weight_exc_reg  <= cfg_router_config_wdata[9];
+                        intra_weight_fanout_idx_reg <= cfg_router_config_wdata[3:0];
                         intra_weight_we_reg[cfg_router_config_wdata[8:5]] <= 1'b1;
                     end
                     default: ;
@@ -1178,22 +1217,45 @@ module snn_core_group_top #(
 
     assign hls_spike_out_pulse = hls_spike_out_valid ^ hls_spike_out_toggle_d;
 
+    assign ext_input_fifo_empty = (ext_input_fifo_count == {(EXT_INPUT_FIFO_AW+1){1'b0}});
+    assign ext_input_fifo_full  = (ext_input_fifo_count == EXT_INPUT_FIFO_DEPTH_COUNT);
+    assign ext_input_fifo_push  = hls_spike_out_pulse && !ext_input_fifo_full;
+    assign ext_input_fifo_pop   = !ext_input_fifo_empty && router_ext_spike_ready;
+
     always @(posedge clk_100mhz) begin
         if (!rst_n_sync || hls_snn_reset) begin
-            hls_ext_pending        <= 1'b0;
-            hls_ext_pending_id     <= {GLOBAL_ID_WIDTH{1'b0}};
-            hls_ext_pending_weight <= {WEIGHT_WIDTH{1'b0}};
-        end else begin
-            if (hls_ext_pending && router_ext_spike_ready)
-                hls_ext_pending <= 1'b0;
-
-            if (hls_spike_out_pulse) begin
-                hls_ext_pending        <= 1'b1;
-                hls_ext_pending_id     <= hls_global_id;
-                hls_ext_pending_weight <= hls_weight_truncated;
+            ext_input_fifo_wr_ptr <= {EXT_INPUT_FIFO_AW{1'b0}};
+            ext_input_fifo_rd_ptr <= {EXT_INPUT_FIFO_AW{1'b0}};
+            ext_input_fifo_count  <= {(EXT_INPUT_FIFO_AW+1){1'b0}};
+            for (ext_fifo_i = 0; ext_fifo_i < EXT_INPUT_FIFO_DEPTH; ext_fifo_i = ext_fifo_i + 1) begin
+                ext_input_fifo_id[ext_fifo_i]     <= {GLOBAL_ID_WIDTH{1'b0}};
+                ext_input_fifo_weight[ext_fifo_i] <= {WEIGHT_WIDTH{1'b0}};
             end
+        end else begin
+            if (ext_input_fifo_push) begin
+                ext_input_fifo_id[ext_input_fifo_wr_ptr]     <= hls_global_id;
+                ext_input_fifo_weight[ext_input_fifo_wr_ptr] <= hls_weight_truncated;
+                ext_input_fifo_wr_ptr <= ext_input_fifo_wr_ptr + 1'b1;
+            end
+
+            if (ext_input_fifo_pop)
+                ext_input_fifo_rd_ptr <= ext_input_fifo_rd_ptr + 1'b1;
+
+            case ({ext_input_fifo_push, ext_input_fifo_pop})
+                2'b10: ext_input_fifo_count <= ext_input_fifo_count + 1'b1;
+                2'b01: ext_input_fifo_count <= ext_input_fifo_count - 1'b1;
+                default: begin
+                end
+            endcase
         end
     end
+
+    assign hls_ext_pending        = !ext_input_fifo_empty;
+    assign hls_ext_pending_id     = ext_input_fifo_id[ext_input_fifo_rd_ptr];
+    assign hls_ext_pending_weight = ext_input_fifo_weight[ext_input_fifo_rd_ptr];
+
+    // HLS ready/busy
+    assign rtl_spike_in_ready = !ext_input_fifo_full;
 
     // Event Router / first-spike tap → HLS observation
     // The tap has priority only while it holds the first group output event.
@@ -1214,8 +1276,6 @@ module snn_core_group_top #(
 
     assign learn_spike_ready       = first_spike_tap_valid ? 1'b0 : hls_spike_in_ready;
 
-    // HLS ready/busy
-    assign rtl_spike_in_ready = !hls_ext_pending;
     assign rtl_snn_ready      = !router_busy & (grp_busy == {NUM_GROUPS{1'b0}});
     assign rtl_snn_busy       = router_busy | (grp_busy != {NUM_GROUPS{1'b0}});
 
@@ -1234,6 +1294,7 @@ module snn_core_group_top #(
     wire [NUM_GROUPS-1:0]     combined_weight_we;
     wire [LOCAL_ID_WIDTH-1:0] combined_weight_src [0:NUM_GROUPS-1];
     wire [LOCAL_ID_WIDTH-1:0] combined_weight_dst [0:NUM_GROUPS-1];
+    wire [FANOUT_IDX_WIDTH-1:0] combined_weight_fanout_idx [0:NUM_GROUPS-1];
     wire [WEIGHT_WIDTH-1:0]   combined_weight_data[0:NUM_GROUPS-1];
     wire                      combined_weight_exc [0:NUM_GROUPS-1];
 
@@ -1246,6 +1307,9 @@ module snn_core_group_top #(
                                              intra_weight_src_reg : grp_weight_src;
             assign combined_weight_dst[g]  = intra_weight_we_reg[g] ?
                                              intra_weight_dst_reg : grp_weight_dst;
+            assign combined_weight_fanout_idx[g] = intra_weight_we_reg[g] ?
+                                             intra_weight_fanout_idx_reg :
+                                             grp_weight_dst[FANOUT_IDX_WIDTH-1:0];
             assign combined_weight_data[g] = intra_weight_we_reg[g] ?
                                              intra_weight_data_reg : grp_weight_data;
             assign combined_weight_exc[g]  = intra_weight_we_reg[g] ?
@@ -1285,7 +1349,10 @@ module snn_core_group_top #(
                 .THRESHOLD_WIDTH    (THRESHOLD_WIDTH),
                 .LEAK_WIDTH         (LEAK_WIDTH),
                 .REFRAC_WIDTH       (REFRAC_WIDTH),
-                .SPIKE_BUFFER_DEPTH (SPIKE_BUFFER_DEPTH)
+                .SPIKE_BUFFER_DEPTH (SPIKE_BUFFER_DEPTH),
+                .INTRA_MAX_FANOUT   (INTRA_MAX_FANOUT),
+                .ENABLE_INTRA_SPARSE(ENABLE_INTRA_SPARSE),
+                .ENABLE_INTRA_DENSE (ENABLE_INTRA_DENSE)
             ) u_core_group (
                 .clk                (clk_100mhz),
                 .rst_n              (rst_n_sync & ~hls_snn_reset),
@@ -1312,6 +1379,7 @@ module snn_core_group_top #(
                 .weight_we          (combined_weight_we[g]),
                 .weight_src_id      (combined_weight_src[g]),
                 .weight_dst_id      (combined_weight_dst[g]),
+                .weight_fanout_idx  (combined_weight_fanout_idx[g]),
                 .weight_data        (combined_weight_data[g]),
                 .weight_exc         (combined_weight_exc[g]),
 

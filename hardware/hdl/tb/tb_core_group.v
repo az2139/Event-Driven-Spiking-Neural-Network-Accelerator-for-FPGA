@@ -29,14 +29,16 @@ module tb_core_group;
     reg [LOCAL_ID_WIDTH-1:0] weight_src_id, weight_dst_id;
     reg [WEIGHT_WIDTH-1:0] weight_data;
     reg weight_exc;
-    wire [15:0] spike_count;
+    wire [31:0] spike_count;
     wire group_busy;
+    wire [8*32-1:0] profile_snapshot;
 
     core_group #(
         .GROUP_ID(0), .NEURONS_PER_GROUP(NEURONS_PER_GROUP),
         .DATA_WIDTH(DATA_WIDTH), .WEIGHT_WIDTH(WEIGHT_WIDTH),
         .THRESHOLD_WIDTH(THRESHOLD_WIDTH), .LEAK_WIDTH(LEAK_WIDTH),
-        .REFRAC_WIDTH(REFRAC_WIDTH), .SPIKE_BUFFER_DEPTH(SPIKE_BUFFER_DEPTH)
+        .REFRAC_WIDTH(REFRAC_WIDTH), .SPIKE_BUFFER_DEPTH(SPIKE_BUFFER_DEPTH),
+        .ENABLE_INTRA_SPARSE(0), .ENABLE_INTRA_DENSE(1)
     ) u_dut (
         .clk(clk), .rst_n(rst_n), .enable(enable),
         .ext_spike_valid(ext_spike_valid), .ext_spike_dest_id(ext_spike_dest_id),
@@ -47,9 +49,11 @@ module tb_core_group;
         .global_threshold(global_threshold), .global_leak_rate(global_leak_rate),
         .global_refrac_period(global_refrac_period),
         .weight_we(weight_we), .weight_src_id(weight_src_id),
-        .weight_dst_id(weight_dst_id), .weight_data(weight_data),
+        .weight_dst_id(weight_dst_id), .weight_fanout_idx(4'd0), .weight_data(weight_data),
         .weight_exc(weight_exc),
-        .spike_count(spike_count), .group_busy(group_busy)
+        .spike_count(spike_count), .group_busy(group_busy),
+        .profile_active(1'b0), .profile_start(1'b0), .profile_stop(1'b0),
+        .profile_snapshot(profile_snapshot)
     );
 
     integer pass_count = 0;

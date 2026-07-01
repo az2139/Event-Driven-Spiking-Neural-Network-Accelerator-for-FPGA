@@ -58,8 +58,9 @@ module tb_integration;
     wire                                        grp_weight_exc;
 
     // Core group status
-    wire [NUM_GROUPS*16-1:0]                    grp_spike_count;
+    wire [NUM_GROUPS*32-1:0]                    grp_spike_count;
     wire [NUM_GROUPS-1:0]                       grp_busy;
+    wire [NUM_GROUPS*8*32-1:0]                  grp_profile_snapshot;
 
     // Router ↔ CT
     wire                        ct_lookup_en;
@@ -134,6 +135,7 @@ module tb_integration;
     wire [NUM_GROUPS-1:0]     combined_weight_we;
     wire [LOCAL_ID_WIDTH-1:0] combined_weight_src [0:NUM_GROUPS-1];
     wire [LOCAL_ID_WIDTH-1:0] combined_weight_dst [0:NUM_GROUPS-1];
+    wire [FANOUT_IDX_WIDTH-1:0] combined_weight_fanout_idx [0:NUM_GROUPS-1];
     wire [WEIGHT_WIDTH-1:0]   combined_weight_data[0:NUM_GROUPS-1];
     wire                      combined_weight_exc [0:NUM_GROUPS-1];
 
@@ -143,6 +145,7 @@ module tb_integration;
             assign combined_weight_we[g]   = host_weight_we[g] | grp_weight_we[g];
             assign combined_weight_src[g]  = host_weight_we[g] ? host_weight_src  : grp_weight_src;
             assign combined_weight_dst[g]  = host_weight_we[g] ? host_weight_dst  : grp_weight_dst;
+            assign combined_weight_fanout_idx[g] = {FANOUT_IDX_WIDTH{1'b0}};
             assign combined_weight_data[g] = host_weight_we[g] ? host_weight_data : grp_weight_data;
             assign combined_weight_exc[g]  = host_weight_we[g] ? host_weight_exc  : grp_weight_exc;
         end
@@ -168,7 +171,9 @@ module tb_integration;
                 .THRESHOLD_WIDTH    (THRESHOLD_WIDTH),
                 .LEAK_WIDTH         (LEAK_WIDTH),
                 .REFRAC_WIDTH       (REFRAC_WIDTH),
-                .SPIKE_BUFFER_DEPTH (SPIKE_BUFFER_DEPTH)
+                .SPIKE_BUFFER_DEPTH (SPIKE_BUFFER_DEPTH),
+                .ENABLE_INTRA_SPARSE(0),
+                .ENABLE_INTRA_DENSE (1)
             ) u_cg (
                 .clk                (clk),
                 .rst_n              (rst_n),
@@ -187,10 +192,15 @@ module tb_integration;
                 .weight_we          (combined_weight_we[g]),
                 .weight_src_id      (combined_weight_src[g]),
                 .weight_dst_id      (combined_weight_dst[g]),
+                .weight_fanout_idx  (combined_weight_fanout_idx[g]),
                 .weight_data        (combined_weight_data[g]),
                 .weight_exc         (combined_weight_exc[g]),
-                .spike_count        (grp_spike_count[g*16 +: 16]),
-                .group_busy         (grp_busy[g])
+                .spike_count        (grp_spike_count[g*32 +: 32]),
+                .group_busy         (grp_busy[g]),
+                .profile_active     (1'b0),
+                .profile_start      (1'b0),
+                .profile_stop       (1'b0),
+                .profile_snapshot   (grp_profile_snapshot[g*8*32 +: 8*32])
             );
         end
     endgenerate
@@ -402,10 +412,10 @@ module tb_integration;
     end
     endtask
 
-    function [15:0] get_grp_spike_count;
+    function [31:0] get_grp_spike_count;
         input integer grp;
     begin
-        get_grp_spike_count = grp_spike_count[grp*16 +: 16];
+        get_grp_spike_count = grp_spike_count[grp*32 +: 32];
     end
     endfunction
 

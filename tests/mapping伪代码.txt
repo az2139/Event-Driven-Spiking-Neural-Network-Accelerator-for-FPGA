@@ -1,0 +1,129 @@
+Algorithm: EC-WBGP Mapping
+
+Input:
+    M              # connection mask
+    a              # firing rate of each neuron
+    I              # connection importance, optional
+    K              # number of core_groups
+    N_cap          # max neurons per group
+    L_cap          # max event load per group
+    E_local_cap    # max local edges per group
+    λ_load         # load imbalance penalty weight
+    λ_cap          # capacity violation penalty weight
+    max_iter       # refinement iterations
+
+Output:
+    P              # mapping result, P[i] = group id of neuron i
+
+
+Step 1: Build weighted graph
+    for each neuron i:
+        node_weight[i] = a[i] + sum over k of a[k] * M[k][i]
+
+    for each connection i -> j where M[i][j] = 1:
+        edge_weight[i][j] = a[i] * M[i][j]
+        # optional:
+        # edge_weight[i][j] = a[i] * M[i][j] * (1 + μ * I[i][j])
+
+
+Step 2: Initialize groups
+    for g in 0 ... K-1:
+        group_nodes[g] = empty
+        group_load[g] = 0
+        group_local_edges[g] = 0
+
+    P[i] = unassigned for all neurons
+
+
+Step 3: Sort neurons by priority
+    priority[i] = node_weight[i] + sum_j edge_weight[i][j] + sum_k edge_weight[k][i]
+
+    Sort neurons in descending order of priority
+
+
+Step 4: Greedy assignment
+    for neuron i in sorted neurons:
+
+        best_group = None
+        best_score = +infinity
+
+        for each group g in 0 ... K-1:
+
+            if neuron_count[g] + 1 > N_cap:
+                continue
+
+            tentative_load = group_load[g] + node_weight[i]
+
+            # Count how many high-weight edges become local
+            local_gain = 0
+            for each already assigned neuron j in group g:
+                if M[i][j] = 1:
+                    local_gain += edge_weight[i][j]
+                if M[j][i] = 1:
+                    local_gain += edge_weight[j][i]
+
+            # Estimate local edge usage after placing i into g
+            tentative_local_edges = group_local_edges[g]
+            for each already assigned neuron j in group g:
+                tentative_local_edges += M[i][j] + M[j][i]
+
+            # Load penalty
+            load_penalty = max(0, tentative_load - L_cap)
+
+            # Local matrix capacity penalty
+            local_cap_penalty = max(0, tentative_local_edges - E_local_cap)
+
+            # Final placement cost
+            score =
+                - local_gain
+                + λ_load * load_penalty
+                + λ_cap  * local_cap_penalty
+
+            if score < best_score:
+                best_score = score
+                best_group = g
+
+        Assign neuron i to best_group
+        P[i] = best_group
+        update group_nodes, group_load, group_local_edges
+
+
+Step 5: Local refinement
+    for iter in 1 ... max_iter:
+
+        improved = false
+
+        for each neuron i:
+
+            current_group = P[i]
+            best_group = current_group
+            best_delta = 0
+
+            for each group g != current_group:
+
+                if moving i to g violates N_cap:
+                    continue
+
+                delta_cost = estimate_cost_change_if_move(i, current_group, g)
+
+                if delta_cost < best_delta:
+                    best_delta = delta_cost
+                    best_group = g
+
+            if best_group != current_group:
+                move neuron i to best_group
+                update group information
+                improved = true
+
+        if improved == false:
+            break
+
+
+Step 6: Generate hardware tables
+    for each connection i -> j where M[i][j] = 1:
+        if P[i] == P[j]:
+            put connection i -> j into local matrix of group P[i]
+        else:
+            put connection i -> j into global CT/router table
+
+    return P

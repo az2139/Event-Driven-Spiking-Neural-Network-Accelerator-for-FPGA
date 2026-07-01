@@ -41,7 +41,11 @@ module core_group #(
     parameter LEAK_WIDTH            = `SNN_LEAK_WIDTH,
     parameter REFRAC_WIDTH          = `SNN_REFRAC_WIDTH,
     parameter SPIKE_BUFFER_DEPTH    = `SNN_SPIKE_BUFFER_DEPTH,
-    parameter LOCAL_ID_WIDTH        = $clog2(NEURONS_PER_GROUP)
+    parameter LOCAL_ID_WIDTH        = $clog2(NEURONS_PER_GROUP),
+    parameter INTRA_MAX_FANOUT      = `SNN_MAX_FANOUT_INTER,
+    parameter INTRA_FANOUT_IDX_WIDTH = (INTRA_MAX_FANOUT <= 1) ? 1 : $clog2(INTRA_MAX_FANOUT),
+    parameter ENABLE_INTRA_SPARSE   = 1,
+    parameter ENABLE_INTRA_DENSE    = 0
 )(
     input  wire                         clk,
     input  wire                         rst_n,
@@ -68,6 +72,7 @@ module core_group #(
     input  wire                         weight_we,
     input  wire [LOCAL_ID_WIDTH-1:0]    weight_src_id,
     input  wire [LOCAL_ID_WIDTH-1:0]    weight_dst_id,
+    input  wire [INTRA_FANOUT_IDX_WIDTH-1:0] weight_fanout_idx,
     input  wire [WEIGHT_WIDTH-1:0]      weight_data,
     input  wire                         weight_exc,     // 1=excitatory weight
 
@@ -79,7 +84,7 @@ module core_group #(
     input  wire                         profile_active,
     input  wire                         profile_start,
     input  wire                         profile_stop,
-    output wire [6*32-1:0]              profile_snapshot
+    output wire [8*32-1:0]              profile_snapshot
 );
 
     //=========================================================================
@@ -145,6 +150,42 @@ module core_group #(
 
     wire [WEIGHT_WIDTH-1:0] wm_weight = wm_dout[WEIGHT_WIDTH-1:0];
     wire                    wm_exc    = wm_dout[WM_DATA_WIDTH-1];
+
+    //=========================================================================
+    // 2b. Local Sparse Intra-group Fanout Table
+    //     Used when ENABLE_INTRA_SPARSE=1 and ENABLE_INTRA_DENSE=0. The legacy
+    //     dense matrix path remains available behind ENABLE_INTRA_DENSE.
+    //
+    //     Address: src_neuron * INTRA_MAX_FANOUT + fanout_idx
+    //     Data:    {valid, exc, weight, dst_neuron}
+    //
+    //     The intra config path uses cfg_router_config_wdata[3:0] as fanout_idx
+    //     for this sparse table. Dense weight writes ignore that field.
+    //=========================================================================
+    localparam INTRA_SPARSE_DEPTH = NEURONS_PER_GROUP * INTRA_MAX_FANOUT;
+    localparam INTRA_SPARSE_ADDR_WIDTH = $clog2(INTRA_SPARSE_DEPTH);
+    localparam INTRA_SPARSE_ENTRY_WIDTH = 1 + 1 + WEIGHT_WIDTH + LOCAL_ID_WIDTH;
+
+    (* ram_style = "block" *)
+    reg [INTRA_SPARSE_ENTRY_WIDTH-1:0] intra_sparse_mem [0:INTRA_SPARSE_DEPTH-1];
+    reg [INTRA_SPARSE_ADDR_WIDTH-1:0]  intra_sparse_wr_addr;
+    reg [INTRA_SPARSE_ADDR_WIDTH-1:0]  intra_sparse_rd_addr;
+    reg                                intra_sparse_we;
+    reg [INTRA_SPARSE_ENTRY_WIDTH-1:0] intra_sparse_din;
+    reg [INTRA_SPARSE_ENTRY_WIDTH-1:0] intra_sparse_dout;
+
+    wire [LOCAL_ID_WIDTH-1:0]  intra_sparse_dst =
+        intra_sparse_dout[LOCAL_ID_WIDTH-1:0];
+    wire [WEIGHT_WIDTH-1:0]    intra_sparse_weight =
+        intra_sparse_dout[LOCAL_ID_WIDTH +: WEIGHT_WIDTH];
+    wire                       intra_sparse_exc =
+        intra_sparse_dout[LOCAL_ID_WIDTH + WEIGHT_WIDTH];
+    wire                       intra_sparse_valid =
+        intra_sparse_dout[LOCAL_ID_WIDTH + WEIGHT_WIDTH + 1];
+
+    wire intra_route_entry_valid =
+        (ENABLE_INTRA_DENSE != 0) ? (wm_weight != 0) :
+        ((ENABLE_INTRA_SPARSE != 0) ? intra_sparse_valid : 1'b0);
 
     //=========================================================================
     // 3. Spike Input FIFO (LUTRAM - handles external + intra-group recurrent)
@@ -243,44 +284,50 @@ module core_group #(
     //   3: intra_fifo_push_count
     //   4: intra_fifo_blocked_event_count
     //   5: out_fifo_overflow_drop_count
+    //   6: core_group_busy_cycles
+    //   7: intra_route_cycles
     //=========================================================================
-    reg [31:0] profile_live [0:5];
-    reg [31:0] profile_snap [0:5];
+    reg [31:0] profile_live [0:7];
+    reg [31:0] profile_snap [0:7];
     integer profile_i;
 
     generate
         genvar profile_g;
-        for (profile_g = 0; profile_g < 6; profile_g = profile_g + 1) begin : gen_profile_snapshot
+        for (profile_g = 0; profile_g < 8; profile_g = profile_g + 1) begin : gen_profile_snapshot
             assign profile_snapshot[profile_g*32 +: 32] = profile_snap[profile_g];
         end
     endgenerate
 
     always @(posedge clk) begin
         if (!rst_n) begin
-            for (profile_i = 0; profile_i < 6; profile_i = profile_i + 1) begin
+            for (profile_i = 0; profile_i < 8; profile_i = profile_i + 1) begin
                 profile_live[profile_i] <= 32'd0;
                 profile_snap[profile_i] <= 32'd0;
             end
         end else begin
             if (profile_start) begin
-                for (profile_i = 0; profile_i < 6; profile_i = profile_i + 1)
+                for (profile_i = 0; profile_i < 8; profile_i = profile_i + 1)
                     profile_live[profile_i] <= 32'd0;
             end else if (profile_active) begin
                 if (state == ST_SPIKE_WR && sp_fired)
                     profile_live[0] <= profile_live[0] + 1'b1;
                 if (state == ST_INTRA_READ)
                     profile_live[1] <= profile_live[1] + 1'b1;
-                if (state == ST_INTRA_ROUTE && wm_weight != 0)
+                if (state == ST_INTRA_ROUTE && intra_route_entry_valid)
                     profile_live[2] <= profile_live[2] + 1'b1;
-                if (state == ST_INTRA_ROUTE && wm_weight != 0 && !fifo_full)
+                if (state == ST_INTRA_ROUTE && intra_route_entry_valid && !fifo_full)
                     profile_live[3] <= profile_live[3] + 1'b1;
-                if (state == ST_INTRA_ROUTE && wm_weight != 0 && fifo_full)
+                if (state == ST_INTRA_ROUTE && intra_route_entry_valid && fifo_full)
                     profile_live[4] <= profile_live[4] + 1'b1;
                 if (state == ST_SPIKE_WR && sp_fired && out_fifo_full)
                     profile_live[5] <= profile_live[5] + 1'b1;
+                if (group_busy)
+                    profile_live[6] <= profile_live[6] + 1'b1;
+                if (intra_routing)
+                    profile_live[7] <= profile_live[7] + 1'b1;
             end
             if (profile_stop) begin
-                for (profile_i = 0; profile_i < 6; profile_i = profile_i + 1)
+                for (profile_i = 0; profile_i < 8; profile_i = profile_i + 1)
                     profile_snap[profile_i] <= profile_live[profile_i];
             end
         end
@@ -296,7 +343,10 @@ module core_group #(
             ns_rd_addr      <= 0;
             ns_din          <= 0;
             wm_we           <= 0;
+            intra_sparse_we <= 0;
             wm_rd_addr      <= 0;
+            intra_sparse_rd_addr <= 0;
+            intra_sparse_dout <= 0;
             sp_addr         <= 0;
             sp_weight       <= 0;
             sp_exc          <= 0;
@@ -319,6 +369,7 @@ module core_group #(
             fifo_pop       <= 0;
             out_fifo_push  <= 0;
             wm_we          <= 0;
+            intra_sparse_we <= 0;
 
             //--- External FIFO write (blocked during intra-group routing) ---
             if (ext_spike_valid && !fifo_full && !intra_routing) begin
@@ -329,10 +380,28 @@ module core_group #(
 
             //--- Weight load (config) ---
             if (weight_we) begin
-                wm_we      <= 1;
-                wm_wr_addr <= weight_src_id * NEURONS_PER_GROUP + weight_dst_id;
-                wm_din     <= {weight_exc, weight_data};
+                if (ENABLE_INTRA_DENSE) begin
+                    wm_we      <= 1;
+                    wm_wr_addr <= weight_src_id * NEURONS_PER_GROUP + weight_dst_id;
+                    wm_din     <= {weight_exc, weight_data};
+                end
+                if (ENABLE_INTRA_SPARSE) begin
+                    intra_sparse_we <= 1'b1;
+                    intra_sparse_wr_addr <=
+                        weight_src_id * INTRA_MAX_FANOUT +
+                        weight_fanout_idx;
+                    intra_sparse_din <= {
+                        (weight_data != {WEIGHT_WIDTH{1'b0}}),
+                        weight_exc,
+                        weight_data,
+                        weight_dst_id
+                    };
+                end
             end
+
+            if (intra_sparse_we)
+                intra_sparse_mem[intra_sparse_wr_addr] <= intra_sparse_din;
+            intra_sparse_dout <= intra_sparse_mem[intra_sparse_rd_addr];
 
             if (enable || state != ST_IDLE) begin
                 case (state)
@@ -430,12 +499,22 @@ module core_group #(
                                 out_fifo_push_data <= sp_addr;
                             end
 
-                            // Start intra-group recurrent routing
-                            fired_neuron_id <= sp_addr;
-                            intra_scan_idx  <= 0;
-                            // Issue first weight memory read
-                            wm_rd_addr <= sp_addr * NEURONS_PER_GROUP;  // weight[fired][0]
-                            state      <= ST_INTRA_READ;
+                            if (ENABLE_INTRA_DENSE) begin
+                                // Start legacy dense intra-group recurrent routing
+                                fired_neuron_id <= sp_addr;
+                                intra_scan_idx  <= 0;
+                                // Issue first weight memory read
+                                wm_rd_addr <= sp_addr * NEURONS_PER_GROUP;  // weight[fired][0]
+                                state      <= ST_INTRA_READ;
+                            end else if (ENABLE_INTRA_SPARSE) begin
+                                // Start sparse intra-group fanout lookup
+                                fired_neuron_id <= sp_addr;
+                                intra_scan_idx  <= 0;
+                                intra_sparse_rd_addr <= sp_addr * INTRA_MAX_FANOUT;
+                                state      <= ST_INTRA_READ;
+                            end else begin
+                                state      <= ST_IDLE;
+                            end
                         end else begin
                             // Not fired: update membrane
                             if (sp_exc) begin
@@ -454,29 +533,60 @@ module core_group #(
                     end
 
                     //------------------------------------------------------
-                    // Intra-group recurrent routing (scan local weight row)
+                    // Intra-group recurrent routing
                     //------------------------------------------------------
                     ST_INTRA_READ: begin
-                        // Wait one cycle for weight memory read
+                        // Wait one cycle for dense weight or sparse entry read
                         state <= ST_INTRA_ROUTE;
                     end
 
                     ST_INTRA_ROUTE: begin
-                        // Process weight readout: if non-zero, push to FIFO
-                        if (wm_weight != 0 && !fifo_full) begin
-                            spike_fifo[fifo_wr_ptr] <= {wm_exc, wm_weight, intra_scan_idx};
-                            fifo_wr_ptr <= fifo_wr_ptr + 1;
-                            fifo_push   <= 1;
-                        end
+                        if (ENABLE_INTRA_DENSE) begin
+                            // Legacy dense scan: if non-zero, push to FIFO
+                            if (wm_weight != 0 && !fifo_full) begin
+                                spike_fifo[fifo_wr_ptr] <= {wm_exc, wm_weight, intra_scan_idx};
+                                fifo_wr_ptr <= fifo_wr_ptr + 1;
+                                fifo_push   <= 1;
+                            end
 
-                        // Advance scan
-                        if (intra_scan_idx + 1 >= NEURONS_PER_GROUP) begin
-                            // Done scanning all local connections
-                            state <= ST_IDLE;
+                            // Advance dense scan
+                            if (intra_scan_idx + 1 >= NEURONS_PER_GROUP) begin
+                                state <= ST_IDLE;
+                            end else begin
+                                intra_scan_idx <= intra_scan_idx + 1;
+                                wm_rd_addr <= fired_neuron_id * NEURONS_PER_GROUP + intra_scan_idx + 1;
+                                state      <= ST_INTRA_READ;
+                            end
+                        end else if (ENABLE_INTRA_SPARSE) begin
+                            // Sparse fanout table: weight=0/valid=0 marks terminator.
+                            if (!intra_sparse_valid) begin
+                                state <= ST_IDLE;
+                            end else begin
+                                if (!fifo_full) begin
+                                    spike_fifo[fifo_wr_ptr] <= {
+                                        intra_sparse_exc,
+                                        intra_sparse_weight,
+                                        intra_sparse_dst
+                                    };
+                                    fifo_wr_ptr <= fifo_wr_ptr + 1;
+                                    fifo_push   <= 1;
+                                end
+
+                                // Preserve the old non-stalling intra behavior:
+                                // a valid entry observed while fifo_full is counted
+                                // as blocked and then skipped.
+                                if (intra_scan_idx + 1 >= INTRA_MAX_FANOUT) begin
+                                    state <= ST_IDLE;
+                                end else begin
+                                    intra_scan_idx <= intra_scan_idx + 1;
+                                    intra_sparse_rd_addr <=
+                                        fired_neuron_id * INTRA_MAX_FANOUT +
+                                        intra_scan_idx + 1;
+                                    state <= ST_INTRA_READ;
+                                end
+                            end
                         end else begin
-                            intra_scan_idx <= intra_scan_idx + 1;
-                            wm_rd_addr <= fired_neuron_id * NEURONS_PER_GROUP + intra_scan_idx + 1;
-                            state      <= ST_INTRA_READ;
+                            state <= ST_IDLE;
                         end
                     end
 

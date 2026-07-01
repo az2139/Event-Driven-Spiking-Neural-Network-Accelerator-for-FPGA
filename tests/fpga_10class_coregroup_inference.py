@@ -155,6 +155,112 @@ def parse_hwh_metadata(hwh_path: str) -> dict:
     return meta
 
 
+def _parse_report_number(value: str) -> int | float | None:
+    value = str(value).strip().replace(",", "")
+    if value in ("", "---", "NA", "Unspecified*"):
+        return None
+    try:
+        if "." in value:
+            return float(value)
+        return int(value)
+    except ValueError:
+        return None
+
+
+def parse_vivado_utilization_report(path: str | None) -> dict:
+    """Extract a compact LUT/FF/BRAM/DSP summary from report_utilization."""
+    info = {
+        "path": path,
+        "available": False,
+        "lut": None,
+        "ff": None,
+        "bram": None,
+        "dsp": None,
+        "lut_util_percent": None,
+        "ff_util_percent": None,
+        "bram_util_percent": None,
+        "dsp_util_percent": None,
+    }
+    if not path or not os.path.exists(path):
+        return info
+
+    with open(path, "r", encoding="utf-8", errors="ignore") as f:
+        txt = f.read()
+
+    patterns = {
+        "lut": r"\|\s*Slice LUTs\s*\|\s*([0-9,]+)\s*\|[^|]*\|[^|]*\|\s*([0-9,]+)\s*\|\s*([0-9.]+)",
+        "ff": r"\|\s*Slice Registers\s*\|\s*([0-9,]+)\s*\|[^|]*\|[^|]*\|\s*([0-9,]+)\s*\|\s*([0-9.]+)",
+        "bram": r"\|\s*Block RAM Tile\s*\|\s*([0-9,]+)\s*\|[^|]*\|[^|]*\|\s*([0-9,]+)\s*\|\s*([0-9.]+)",
+        "dsp": r"\|\s*DSPs\s*\|\s*([0-9,]+)\s*\|[^|]*\|[^|]*\|\s*([0-9,]+)\s*\|\s*([0-9.]+)",
+    }
+    for key, pat in patterns.items():
+        m = re.search(pat, txt)
+        if not m:
+            continue
+        info[key] = int(str(m.group(1)).replace(",", ""))
+        info[f"{key}_available"] = int(str(m.group(2)).replace(",", ""))
+        info[f"{key}_util_percent"] = float(m.group(3))
+        info["available"] = True
+    return info
+
+
+def parse_vivado_power_report(path: str | None) -> dict:
+    """Extract Vivado power summary and estimate PL dynamic by excluding PS7."""
+    info = {
+        "path": path,
+        "available": False,
+        "total_on_chip_w": None,
+        "dynamic_w": None,
+        "device_static_w": None,
+        "ps7_dynamic_w": None,
+        "pl_dynamic_w": None,
+        "confidence": None,
+    }
+    if not path or not os.path.exists(path):
+        return info
+
+    with open(path, "r", encoding="utf-8", errors="ignore") as f:
+        txt = f.read()
+
+    fields = {
+        "total_on_chip_w": r"\|\s*Total On-Chip Power \(W\)\s*\|\s*([0-9.]+)",
+        "dynamic_w": r"\|\s*Dynamic \(W\)\s*\|\s*([0-9.]+)",
+        "device_static_w": r"\|\s*Device Static \(W\)\s*\|\s*([0-9.]+)",
+        "confidence": r"\|\s*Confidence Level\s*\|\s*([^|]+?)\s*\|",
+    }
+    for key, pat in fields.items():
+        m = re.search(pat, txt)
+        if not m:
+            continue
+        value = m.group(1).strip()
+        info[key] = value if key == "confidence" else float(value)
+
+    ps = re.search(r"\|\s*processing_system7_0\s*\|\s*([0-9.]+)\s*\|", txt)
+    if not ps:
+        ps = re.search(r"\|\s*PS7\s*\|\s*([0-9.]+)\s*\|", txt)
+    if ps:
+        info["ps7_dynamic_w"] = float(ps.group(1))
+
+    if info["dynamic_w"] is not None:
+        if info["ps7_dynamic_w"] is not None:
+            info["pl_dynamic_w"] = max(0.0, info["dynamic_w"] - info["ps7_dynamic_w"])
+        else:
+            info["pl_dynamic_w"] = info["dynamic_w"]
+    info["available"] = any(info[k] is not None for k in ("total_on_chip_w", "dynamic_w", "pl_dynamic_w"))
+    return info
+
+
+def default_report_path(data_dir: str, filename: str) -> str | None:
+    candidates = [
+        os.path.join(data_dir, filename),
+        os.path.join(os.getcwd(), "outputs", filename),
+    ]
+    for path in candidates:
+        if os.path.exists(path):
+            return path
+    return None
+
+
 def decode_global_id(nid: int, local_id_width: int) -> tuple[int, int]:
     return int(nid >> local_id_width), int(nid & ((1 << local_id_width) - 1))
 
@@ -610,23 +716,49 @@ def encode_ct_entry(src_global: int,
     return addr, data
 
 
+def encode_intra_sparse_entry(src_global: int,
+                              fanout_idx: int,
+                              dst_global: int,
+                              weight: int,
+                              valid: bool = True,
+                              exc: bool = True,
+                              local_id_width: int = DEFAULT_LOCAL_ID_WIDTH) -> tuple[int, int]:
+    """Encode one sparse intra-group fanout-table entry.
+
+    The RTL stores intra entries as {valid, exc, weight, dst_local}. The
+    current config word has no separate valid bit for intra writes, so
+    valid=False is represented as weight=0 terminator.
+    """
+    src_group, src_neuron = decode_global_id(src_global, local_id_width)
+    dst_group, dst_neuron = decode_global_id(dst_global, local_id_width)
+    if src_group != dst_group:
+        raise ValueError("intra sparse entry requires src and dst in the same group")
+    addr = (0x1 << 28)
+    data = (src_neuron & 0x7F) << 25
+    data |= (dst_neuron & 0x7F) << 18
+    data |= ((int(weight) if valid else 0) & 0xFF) << 10
+    data |= (1 if exc else 0) << 9
+    data |= (src_group & 0xF) << 5
+    data |= int(fanout_idx) & 0xF
+    return addr, data
+
+
 def encode_intra_weight(src_global: int,
                         dst_global: int,
                         weight: int,
                         exc: bool = True,
-                        local_id_width: int = DEFAULT_LOCAL_ID_WIDTH) -> tuple[int, int]:
-    """Encode snn_core_group_top intra-group weight write format."""
-    src_group, src_neuron = decode_global_id(src_global, local_id_width)
-    dst_group, dst_neuron = decode_global_id(dst_global, local_id_width)
-    if src_group != dst_group:
-        raise ValueError("intra weight requires src and dst in the same group")
-    addr = (0x1 << 28)
-    data = (src_neuron & 0x7F) << 25
-    data |= (dst_neuron & 0x7F) << 18
-    data |= (int(weight) & 0xFF) << 10
-    data |= (1 if exc else 0) << 9
-    data |= (src_group & 0xF) << 5
-    return addr, data
+                        local_id_width: int = DEFAULT_LOCAL_ID_WIDTH,
+                        fanout_idx: int = 0) -> tuple[int, int]:
+    """Backward-compatible wrapper for the intra config word."""
+    return encode_intra_sparse_entry(
+        src_global=src_global,
+        fanout_idx=fanout_idx,
+        dst_global=dst_global,
+        weight=weight,
+        valid=(int(weight) != 0),
+        exc=exc,
+        local_id_width=local_id_width,
+    )
 
 
 def cfg_write_pair(cfg: legacy.MMIO, addr: int, data: int) -> None:
@@ -718,20 +850,44 @@ def program_real_ct_fanout(cfg: legacy.MMIO,
         src_hw = int(input_logical_to_hw[pixel_idx])
         src_group, _ = decode_global_id(src_hw, local_id_width)
         ct_entries = []
+        intra_fanout_idx = 0
         for neuron_idx, dst_hw, weight, dst_group in entries:
             dst_group_decoded, _ = decode_global_id(int(dst_hw), local_id_width)
             if split_same_group and int(dst_group_decoded) == int(src_group):
-                addr, data = encode_intra_weight(
+                addr, data = encode_intra_sparse_entry(
                     src_global=src_hw,
+                    fanout_idx=intra_fanout_idx,
                     dst_global=int(dst_hw),
                     weight=int(weight),
+                    valid=True,
                     exc=True,
                     local_id_width=local_id_width,
                 )
                 cfg_write_pair(cfg, addr, data)
                 intra_entries += 1
+                intra_fanout_idx += 1
             else:
                 ct_entries.append((neuron_idx, int(dst_hw), int(weight), int(dst_group)))
+
+        if split_same_group:
+            if intra_fanout_idx >= int(max_fanout_inter):
+                raise ValueError(
+                    f"sparse intra fanout for pixel source {pixel_idx} uses "
+                    f"{intra_fanout_idx} valid entries, leaving no terminator slot"
+                )
+            src_dummy_global = int(src_hw)
+            src_group_for_term, _src_local_for_term = decode_global_id(src_dummy_global, local_id_width)
+            term_dst_global = src_group_for_term << int(local_id_width)
+            addr, data = encode_intra_sparse_entry(
+                src_global=src_dummy_global,
+                fanout_idx=intra_fanout_idx,
+                dst_global=term_dst_global,
+                weight=0,
+                valid=False,
+                exc=True,
+                local_id_width=local_id_width,
+            )
+            cfg_write_pair(cfg, addr, data)
 
         for fanout_idx, (_neuron_idx, dst_hw, weight, _dst_group) in enumerate(ct_entries):
             addr, data = encode_ct_entry(
@@ -925,6 +1081,55 @@ def clear_intra_hw_rows(cfg: legacy.MMIO,
     return writes
 
 
+def clear_intra_sparse_rows(cfg: legacy.MMIO,
+                            source_hw_ids,
+                            local_id_width: int = DEFAULT_LOCAL_ID_WIDTH,
+                            max_fanout_inter: int = DEFAULT_MAX_FANOUT_INTER) -> int:
+    """Clear sparse intra fanout slots for explicit hardware-global source IDs."""
+    writes = 0
+    for src_hw_raw in source_hw_ids:
+        src_hw = int(src_hw_raw)
+        src_group, _ = decode_global_id(src_hw, local_id_width)
+        term_dst_global = src_group << int(local_id_width)
+        for fanout_idx in range(int(max_fanout_inter)):
+            addr, data = encode_intra_sparse_entry(
+                src_global=src_hw,
+                fanout_idx=fanout_idx,
+                dst_global=term_dst_global,
+                weight=0,
+                valid=False,
+                exc=True,
+                local_id_width=local_id_width,
+            )
+            cfg_write_pair(cfg, addr, data)
+            writes += 1
+    return writes
+
+
+def clear_intra_sparse_fanout0_all(cfg: legacy.MMIO,
+                                   num_groups: int,
+                                   local_id_width: int = DEFAULT_LOCAL_ID_WIDTH) -> int:
+    """Install a fanout-0 terminator for every possible local source row."""
+    writes = 0
+    group_capacity = 1 << int(local_id_width)
+    for src_group in range(int(num_groups)):
+        term_dst_global = src_group << int(local_id_width)
+        for src_local in range(group_capacity):
+            src_hw = (src_group << int(local_id_width)) | src_local
+            addr, data = encode_intra_sparse_entry(
+                src_global=src_hw,
+                fanout_idx=0,
+                dst_global=term_dst_global,
+                weight=0,
+                valid=False,
+                exc=True,
+                local_id_width=local_id_width,
+            )
+            cfg_write_pair(cfg, addr, data)
+            writes += 1
+    return writes
+
+
 def program_coregroup_for_inference(cfg: legacy.MMIO,
                                     n_neurons: int,
                                     local_id_width: int,
@@ -977,9 +1182,9 @@ def program_coregroup_for_inference(cfg: legacy.MMIO,
             local_id_width=local_id_width,
         )
         if intra_mode == "split-same-group":
-            intra_writes += clear_intra_hw_rows(
+            intra_writes += clear_intra_sparse_fanout0_all(
                 cfg,
-                input_logical_to_hw,
+                num_groups=(len(dummy_sink_ids) if dummy_sink_ids is not None else DEFAULT_GROUPS),
                 local_id_width=local_id_width,
             )
         real_cfg = program_real_ct_fanout(
@@ -1044,6 +1249,7 @@ def program_coregroup_for_inference(cfg: legacy.MMIO,
         "intra_mode": intra_mode,
         "intra_mode_requested": intra_mode_requested,
         "intra_nonzero_entries": int(intra_nonzero_entries),
+        "intra_clear_writes": int(intra_writes),
         "ct_expected_dummy_entries": int(
             (valid_entries if mode["kind"] == "random" else
              ((1 << int(local_id_width)) * len(dummy_sink_ids) - len(dummy_sink_ids)) *
@@ -1257,6 +1463,14 @@ def parse_args():
     p.add_argument("--stop-sleep-ms", type=float, default=legacy.STOP_SLEEP_MS_DEFAULT)
     p.add_argument("--pl-clock-mhz", type=float, default=DEFAULT_PL_CLK_MHZ)
     p.add_argument("--pl-clock-hz", type=float, default=0.0)
+    p.add_argument("--power-report", default=None,
+                   help="Vivado report_power .rpt path for PL power/efficiency summary")
+    p.add_argument("--util-report", default=None,
+                   help="Vivado report_utilization .rpt path for LUT/FF/BRAM/DSP summary")
+    p.add_argument("--peak-router-lanes", type=int, default=1,
+                   help="Theoretical router SOP lanes per cycle for peak GSOP/S")
+    p.add_argument("--peak-intra-lanes-per-group", type=int, default=1,
+                   help="Theoretical intra SOP lanes per group per cycle for peak GSOP/S")
     p.add_argument("--print-every", type=int, default=100)
     return p.parse_args()
 
@@ -1282,6 +1496,12 @@ def main() -> None:
     deploy_path = args.weights or os.path.join(data_dir, "mnist_10class_deployment.npz")
     result_path = args.output or os.path.join(data_dir, "mnist_10class_coregroup_results.json")
     profile_path = args.profile_output
+    util_report_path = args.util_report or default_report_path(
+        data_dir, "snn_core_group_profile_utilization.rpt")
+    power_report_path = args.power_report or default_report_path(
+        data_dir, "snn_core_group_profile_power.rpt")
+    util_report = parse_vivado_utilization_report(util_report_path)
+    power_report = parse_vivado_power_report(power_report_path)
 
     print("=" * 72)
     print("10-Class MNIST FPGA Inference  (core-group/profile route)")
@@ -1392,9 +1612,9 @@ def main() -> None:
             f"version={profile_version} groups={profile_num_groups} "
             f"counters={profile_counter_count}"
         )
-        if profile_enabled and profile_version not in (9, 10):
+        if profile_enabled and profile_version not in (9, 10, 11, 12):
             print("ERROR: this script expects the current core-group/profile "
-                  "bitstream with PROFILE_INFO version=9 or BASIC version=10.")
+                  "bitstream with PROFILE_INFO version=9 or BASIC version=10/11/12.")
             print("  version=6 was the temporary relay experiment and can deadlock/slow the run; "
                   "rebuild and redeploy the current RTL/HWH/bit files.")
             sys.exit(1)
@@ -1438,7 +1658,7 @@ def main() -> None:
           f"same_entries={route_cfg['ct_same_entries']} "
           f"intra_mode={route_cfg['intra_mode']} "
           f"intra_nonzero_entries={route_cfg['intra_nonzero_entries']} "
-          f"intra_zero_writes={route_cfg['intra_zero_writes']} "
+          f"intra_clear_writes={route_cfg['intra_clear_writes']} "
           f"config_ms={route_cfg['config_ms']:.3f}")
     if route_cfg["ct_pattern_kind"] == "real":
         print(f"  Real CT: pre_prune_entries={route_cfg['ct_real_pre_prune_entries']} "
@@ -1847,6 +2067,21 @@ def main() -> None:
     router_busy_total = sum(row_profile_value(r, "router_busy_cycles") for r in results)
     router_stall_total = sum(row_profile_value(r, "router_stall_cycles") for r in results)
     total_latency_total = sum(row_profile_value(r, "total_latency_cycles") for r in results)
+    has_core_group_busy_sum = any("core_group_busy_cycles_sum" in r.get("profile", {}) for r in results)
+    has_intra_route_cycles_sum = any("intra_route_cycles_sum" in r.get("profile", {}) for r in results)
+    has_intra_weight_nonzero = any("intra_weight_nonzero_count" in r.get("profile", {}) for r in results)
+    core_group_busy_total = (
+        sum(row_profile_value(r, "core_group_busy_cycles_sum") for r in results)
+        if has_core_group_busy_sum else None
+    )
+    intra_route_cycles_total = (
+        sum(row_profile_value(r, "intra_route_cycles_sum") for r in results)
+        if has_intra_route_cycles_sum else None
+    )
+    intra_weight_nonzero_total = (
+        sum(row_profile_value(r, "intra_weight_nonzero_count") for r in results)
+        if has_intra_weight_nonzero else 0
+    )
     out_fifo_overflow_drop_total = sum(row_profile_value(r, "drop_spike_count") for r in results)
     if out_fifo_overflow_drop_total == 0:
         out_fifo_overflow_drop_total = sum(row_profile_value(r, "out_fifo_overflow_drop_count") for r in results)
@@ -1934,6 +2169,30 @@ def main() -> None:
         1000.0 / pl_service_ms_mean
         if pl_service_ms_mean is not None and pl_service_ms_mean > 0.0 else None
     )
+    synaptic_ops_total = int(ct_valid_total + intra_weight_nonzero_total)
+    peak_router_lanes = max(0, int(args.peak_router_lanes))
+    peak_intra_lanes_per_group = max(0, int(args.peak_intra_lanes_per_group))
+    peak_parallel_sops_per_cycle = (
+        peak_router_lanes + peak_intra_lanes_per_group * int(profile_num_groups)
+    )
+    peak_gsops = (pl_clock_hz * peak_parallel_sops_per_cycle) / 1.0e9
+    gsops_first_spike = (
+        (synaptic_ops_total * pl_first_spike_tput_img_s) / 1.0e9 / max(n_images, 1)
+        if pl_first_spike_tput_img_s is not None else None
+    )
+    gsops_service = (
+        (synaptic_ops_total * pl_service_tput_img_s) / 1.0e9 / max(n_images, 1)
+        if pl_service_tput_img_s is not None else None
+    )
+    gsops_service_util_percent = (
+        gsops_service / peak_gsops * 100.0
+        if gsops_service is not None and peak_gsops > 0.0 else None
+    )
+    pl_dynamic_w = power_report.get("pl_dynamic_w") if power_report.get("available") else None
+    gsops_per_w_service = (
+        gsops_service / float(pl_dynamic_w)
+        if gsops_service is not None and pl_dynamic_w is not None and float(pl_dynamic_w) > 0.0 else None
+    )
 
     sw_ref_ms_mean = timing_mean("sw_ref_ms")
     reset_ms_mean = timing_mean("reset_ms")
@@ -1990,6 +2249,10 @@ def main() -> None:
     print("  Communication profile totals:")
     print(f"    router_busy_cycles:    {router_busy_total}")
     print(f"    router_stall_cycles:   {router_stall_total}")
+    if core_group_busy_total is not None:
+        print(f"    core_group_busy_cycles:{core_group_busy_total}")
+    if intra_route_cycles_total is not None:
+        print(f"    intra_route_cycles:    {intra_route_cycles_total}")
     print(f"    total_latency_cycles:  {total_latency_total}")
     print(f"    out_fifo_drop_count:   {out_fifo_overflow_drop_total}")
     print(f"\n  CT mode check ({args.ct_mode}):")
@@ -2037,6 +2300,52 @@ def main() -> None:
         print(f"  PL-only throughput (first-spike window): {pl_first_spike_tput_img_s:.2f} img/s")
     if pl_service_tput_img_s is not None:
         print(f"  PL-only throughput (service window): {pl_service_tput_img_s:.2f} img/s")
+    print("  PL compute estimate:")
+    print(f"    synaptic_ops_total:     {synaptic_ops_total} "
+          f"(ct_valid={ct_valid_total}, intra_nonzero={intra_weight_nonzero_total})")
+    print(f"    peak_sops_per_cycle:    {peak_parallel_sops_per_cycle} "
+          f"(router_lanes={peak_router_lanes}, "
+          f"intra_lanes={peak_intra_lanes_per_group} x groups={profile_num_groups})")
+    print(f"    peak GSOP/S:            {peak_gsops:.6f}")
+    if gsops_first_spike is not None:
+        print(f"    GSOP/S first-spike:     {gsops_first_spike:.6f}")
+    if gsops_service is not None:
+        print(f"    GSOP/S service:         {gsops_service:.6f}")
+    if gsops_service_util_percent is not None:
+        print(f"    service/peak util:      {gsops_service_util_percent:.4f}%")
+    if power_report.get("available"):
+        total_w = power_report.get("total_on_chip_w")
+        dyn_w = power_report.get("dynamic_w")
+        static_w = power_report.get("device_static_w")
+        ps_w = power_report.get("ps7_dynamic_w")
+        pl_w = power_report.get("pl_dynamic_w")
+        print("  Vivado power estimate:")
+        print(f"    report:                 {power_report.get('path')}")
+        print(f"    total_on_chip_w:        {total_w:.3f}" if total_w is not None else "    total_on_chip_w:        N/A")
+        print(f"    dynamic_w:              {dyn_w:.3f}" if dyn_w is not None else "    dynamic_w:              N/A")
+        print(f"    device_static_w:        {static_w:.3f}" if static_w is not None else "    device_static_w:        N/A")
+        print(f"    ps7_dynamic_w:          {ps_w:.3f}" if ps_w is not None else "    ps7_dynamic_w:          N/A")
+        print(f"    pl_dynamic_w_excl_ps7:  {pl_w:.3f}" if pl_w is not None else "    pl_dynamic_w_excl_ps7:  N/A")
+        print(f"    confidence:             {power_report.get('confidence') or 'N/A'}")
+        if gsops_per_w_service is not None:
+            print(f"    service GSOP/S/W:       {gsops_per_w_service:.6f}")
+    else:
+        print("  Vivado power estimate:    unavailable "
+              "(pass --power-report or copy snn_core_group_profile_power.rpt)")
+    if util_report.get("available"):
+        print("  Vivado resource utilization:")
+        print(f"    report:                 {util_report.get('path')}")
+        print(f"    LUT:                    {util_report.get('lut')} / "
+              f"{util_report.get('lut_available')} ({util_report.get('lut_util_percent'):.2f}%)")
+        print(f"    FF:                     {util_report.get('ff')} / "
+              f"{util_report.get('ff_available')} ({util_report.get('ff_util_percent'):.2f}%)")
+        print(f"    BRAM tile:              {util_report.get('bram')} / "
+              f"{util_report.get('bram_available')} ({util_report.get('bram_util_percent'):.2f}%)")
+        print(f"    DSP:                    {util_report.get('dsp')} / "
+              f"{util_report.get('dsp_available')} ({util_report.get('dsp_util_percent'):.2f}%)")
+    else:
+        print("  Vivado resource utilization: unavailable "
+              "(pass --util-report or copy snn_core_group_profile_utilization.rpt)")
 
     print("\n  Timing decomposition (per image, host-side measured):")
     print(f"    iter_wall_ms_mean:    {mean_iter:.6f}")
@@ -2114,12 +2423,28 @@ def main() -> None:
             "ct_invalid_entry_count": int(ct_invalid_total),
             "cross_group_event_count": int(ct_cross_total),
             "same_group_event_count": int(ct_same_total),
+            "intra_weight_nonzero_count": int(intra_weight_nonzero_total),
             "router_busy_cycles": int(router_busy_total),
             "router_stall_cycles": int(router_stall_total),
             "total_latency_cycles": int(total_latency_total),
             "out_fifo_overflow_drop_count": int(out_fifo_overflow_drop_total),
             "expected": ct_expected_total,
         },
+        "pl_compute_estimate": {
+            "synaptic_ops_total": int(synaptic_ops_total),
+            "synaptic_ops_definition": "ct_valid_entry_count + intra_weight_nonzero_count(if present)",
+            "peak_sops_per_cycle": int(peak_parallel_sops_per_cycle),
+            "peak_router_lanes": int(peak_router_lanes),
+            "peak_intra_lanes_per_group": int(peak_intra_lanes_per_group),
+            "peak_groups": int(profile_num_groups),
+            "peak_gsops": peak_gsops,
+            "gsops_first_spike": gsops_first_spike,
+            "gsops_service": gsops_service,
+            "gsops_service_util_percent": gsops_service_util_percent,
+            "gsops_per_w_service": gsops_per_w_service,
+        },
+        "vivado_power_report": power_report,
+        "vivado_utilization_report": util_report,
         "ct_dummy_sink_ids": [
             (None if hw is None else int(hw)) for hw in dummy_sink_ids
         ],
@@ -2189,6 +2514,17 @@ def main() -> None:
                 "hw_pred_count_score": row.get("hw_pred_count_score"),
                 "hw_pred_s2mm": row.get("hw_pred_s2mm"),
                 "hw_pred_rtl_first_classifier": row.get("hw_pred_rtl_first_classifier"),
+                "input_words": row.get("input_words"),
+                "router_spikes": row.get("router_spikes"),
+                "neuron_spikes": row.get("neuron_spikes"),
+                "hls_spike_count": row.get("hls_spike_count"),
+                "hls_spike_target": row.get("hls_spike_target"),
+                "hls_input_done": int(row.get("hls_input_done", False)),
+                "mm2s_done": int(row.get("mm2s_done", False)),
+                "pl_latency_cycles": row.get("pl_latency_cycles"),
+                "pl_service_cycles": row.get("pl_service_cycles"),
+                "mm2s_sr": row.get("mm2s_sr"),
+                "s2mm_sr": row.get("s2mm_sr"),
                 "hw_matches_sw_ct_pruned": int(
                     row.get("sw_ct_pruned_pred") is not None and
                     row.get("hw_pred") == row.get("sw_ct_pruned_pred")

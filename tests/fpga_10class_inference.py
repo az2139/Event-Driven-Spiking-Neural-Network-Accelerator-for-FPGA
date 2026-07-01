@@ -101,10 +101,9 @@ PROFILE_BASIC_NAMES = [
     'router_stall_cycles',
     'cross_group_event_count',
     'same_group_event_count',
-    'intra_weight_lookup_count',
-    'intra_weight_nonzero_count',
-    'intra_fifo_blocked_event_count',
     'drop_spike_count',
+    'service_dbg_input_done_cycle',
+    'service_dbg_hls_pending_clear_cycle',
 ] + [
     f'class_{cls}_spike_count' for cls in range(10)
 ] + [
