@@ -2763,8 +2763,8 @@
       </xilinx:taxonomies>
       <xilinx:displayName>Snn_inference_profile_hls</xilinx:displayName>
       <xilinx:definitionSource>HLS</xilinx:definitionSource>
-      <xilinx:coreRevision>2114640535</xilinx:coreRevision>
-      <xilinx:coreCreationDateTime>2026-06-05T10:55:31Z</xilinx:coreCreationDateTime>
+      <xilinx:coreRevision>2114678343</xilinx:coreRevision>
+      <xilinx:coreCreationDateTime>2026-07-01T17:03:19Z</xilinx:coreCreationDateTime>
       <xilinx:sdxKernelAttributes>
         <xilinx:sdx_kernel>true</xilinx:sdx_kernel>
         <xilinx:sdx_kernel_type>hls</xilinx:sdx_kernel_type>

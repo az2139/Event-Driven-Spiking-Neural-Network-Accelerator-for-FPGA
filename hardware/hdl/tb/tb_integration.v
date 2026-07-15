@@ -200,6 +200,13 @@ module tb_integration;
                 .profile_active     (1'b0),
                 .profile_start      (1'b0),
                 .profile_stop       (1'b0),
+                .sample_clear       (1'b0),
+                .sample_clear_done  (),
+                .score_cfg_we       (1'b0),
+                .score_cfg_class    (4'd0),
+                .score_cfg_local_id ({LOCAL_ID_WIDTH{1'b0}}),
+                .score_cfg_valid    (1'b0),
+                .score_live_snapshot(),
                 .profile_snapshot   (grp_profile_snapshot[g*8*32 +: 8*32])
             );
         end

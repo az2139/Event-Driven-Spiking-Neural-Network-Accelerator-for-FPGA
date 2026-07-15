@@ -1,0 +1,1 @@
+-nolog -debug "off" "tb_core_group" -s "bp_score_core_group_sim" 

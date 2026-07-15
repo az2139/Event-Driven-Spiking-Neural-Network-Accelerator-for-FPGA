@@ -1305,6 +1305,604 @@ def build_real_input_spike_words(image: np.ndarray,
     return (hw_order.astype(np.uint32) & np.uint32(id_mask)) | np.uint32(0x7F << hls_spike_pkt_id_w)
 
 
+def is_bp_coregroup_deployment(data: np.lib.npyio.NpzFile) -> bool:
+    return ("format_name" in data.files and
+            str(np.asarray(data["format_name"]).item()) == "bp_coregroup_deployment")
+
+
+def load_bp_dataset(deployment: np.lib.npyio.NpzFile,
+                    dataset_path: str | None) -> tuple[np.ndarray, np.ndarray]:
+    source = deployment
+    if "test_imgs" not in source.files or "test_lbls" not in source.files:
+        if not dataset_path:
+            raise ValueError(
+                "BP deployment has no test data; pass --dataset with an NPZ "
+                "containing test_imgs and test_lbls"
+            )
+        source = np.load(dataset_path, allow_pickle=True)
+    if "test_imgs" not in source.files or "test_lbls" not in source.files:
+        raise ValueError(f"{dataset_path} has no test_imgs/test_lbls arrays")
+    images = np.asarray(source["test_imgs"], dtype=np.float32)
+    labels = np.asarray(source["test_lbls"], dtype=np.int64).reshape(-1)
+    if len(images) != len(labels):
+        raise ValueError(f"test image/label count mismatch: {len(images)} != {len(labels)}")
+    return images, labels
+
+
+def program_bp_coregroup_package(cfg: legacy.MMIO,
+                                 deployment: np.lib.npyio.NpzFile) -> dict:
+    cfg_addr = np.asarray(deployment["cfg_addr"], dtype=np.uint32).reshape(-1)
+    cfg_wdata = np.asarray(deployment["cfg_wdata"], dtype=np.uint32).reshape(-1)
+    if cfg_addr.shape != cfg_wdata.shape:
+        raise ValueError("cfg_addr and cfg_wdata lengths differ")
+    t0 = time.perf_counter()
+    for addr, data in zip(cfg_addr, cfg_wdata):
+        cfg_write_pair(cfg, int(addr), int(data))
+    return {
+        "writes": int(cfg_addr.size),
+        "config_ms": (time.perf_counter() - t0) * 1000.0,
+        "intra_writes": int(np.count_nonzero((cfg_addr >> 28) == 1)),
+        "ct_writes": int(np.count_nonzero((cfg_addr >> 28) == 0)),
+        "score_writes": int(np.count_nonzero((cfg_addr >> 28) == 2)),
+    }
+
+
+def build_bp_input_spike_words(image: np.ndarray,
+                               input_hw_ids: np.ndarray,
+                               input_threshold: float,
+                               input_weight: int,
+                               packet_id_width: int) -> np.ndarray:
+    flat = np.asarray(image, dtype=np.float32).reshape(-1)
+    input_hw_ids = np.asarray(input_hw_ids, dtype=np.int32).reshape(-1)
+    if flat.size != input_hw_ids.size:
+        raise ValueError(f"image has {flat.size} pixels, deployment expects {input_hw_ids.size}")
+    active = np.flatnonzero(flat > float(input_threshold))
+    if active.size == 0:
+        return np.zeros(1, dtype=np.uint32)
+    id_mask = (1 << int(packet_id_width)) - 1
+    return ((input_hw_ids[active].astype(np.uint32) & np.uint32(id_mask)) |
+            np.uint32((int(input_weight) & 0xFF) << int(packet_id_width)))
+
+
+def bp_sync_reference(image: np.ndarray,
+                      deployment: np.lib.npyio.NpzFile) -> dict:
+    """Quantized T=1 layer-synchronous reference matching BP forward semantics."""
+    deployment_keys = getattr(deployment, "files", deployment.keys())
+    output_readout = (str(np.asarray(deployment["output_readout"]).item())
+                      if "output_readout" in deployment_keys else "")
+    if output_readout == "nonnegative_weight_score_argmax":
+        event = bp_event_reference(image, deployment, fire_once=True)
+        return {
+            "pred": int(event["pred"]),
+            "hidden_spikes": int(event["fired_hidden"]),
+            "output_spikes": [],
+            "output_score": event["output_score"],
+        }
+    n_input = int(deployment["n_input"])
+    n_hidden = int(deployment["n_hidden"])
+    n_output = int(deployment["n_output"])
+    threshold = int(deployment["hw_threshold"])
+    pixel_threshold = float(deployment["input_threshold"])
+    src = np.asarray(deployment["edge_src"], dtype=np.int32)
+    dst = np.asarray(deployment["edge_dst"], dtype=np.int32)
+    mag = np.asarray(deployment["edge_weight"], dtype=np.int32)
+    sign = np.where(np.asarray(deployment["edge_exc"], dtype=np.uint8) != 0, 1, -1)
+    signed_weight = mag * sign
+    active_input = np.asarray(image, dtype=np.float32).reshape(-1) > pixel_threshold
+
+    hidden_mem = np.zeros(n_hidden, dtype=np.int64)
+    ih = (src < n_input) & (dst >= n_input) & (dst < n_input + n_hidden)
+    ih_idx = np.flatnonzero(ih)
+    active_ih_idx = ih_idx[active_input[src[ih_idx]]]
+    np.add.at(hidden_mem, dst[active_ih_idx] - n_input, signed_weight[active_ih_idx])
+    hidden_mem = np.maximum(hidden_mem, 0)
+    hidden_spike = hidden_mem >= threshold
+
+    output_score = np.zeros(n_output, dtype=np.int64)
+    ho = ((src >= n_input) & (src < n_input + n_hidden) &
+          (dst >= n_input + n_hidden))
+    ho_idx = np.flatnonzero(ho)
+    active_ho_idx = ho_idx[hidden_spike[src[ho_idx] - n_input]]
+    np.add.at(output_score, dst[active_ho_idx] - n_input - n_hidden,
+              signed_weight[active_ho_idx])
+    output_mem = np.maximum(output_score, 0)
+    output_spike = output_mem >= threshold
+    return {
+        "pred": int(np.argmax(output_score)),
+        "hidden_spikes": int(np.count_nonzero(hidden_spike)),
+        "output_spikes": output_spike.astype(np.uint8).tolist(),
+        "output_score": output_score.astype(int).tolist(),
+    }
+
+
+def bp_event_reference(image: np.ndarray,
+                       deployment: np.lib.npyio.NpzFile,
+                       fire_once: bool = True) -> dict:
+    """Functional event-serial reference for the programmed sparse graph."""
+    total_nodes = len(np.asarray(deployment["logical_to_hw"]).reshape(-1))
+    n_input = int(deployment["n_input"])
+    n_hidden = int(deployment["n_hidden"])
+    n_output = int(deployment["n_output"])
+    output_offset = n_input + n_hidden
+    threshold = int(deployment["hw_threshold"])
+    input_threshold = float(deployment["input_threshold"])
+    input_weight = int(deployment["input_spike_weight"])
+    src = np.asarray(deployment["edge_src"], dtype=np.int32)
+    dst = np.asarray(deployment["edge_dst"], dtype=np.int32)
+    mag = np.asarray(deployment["edge_weight"], dtype=np.int32)
+    exc = np.asarray(deployment["edge_exc"], dtype=np.uint8) != 0
+
+    adjacency: list[list[tuple[int, int, bool]]] = [[] for _ in range(total_nodes)]
+    for edge_idx in range(src.size):
+        adjacency[int(src[edge_idx])].append(
+            (int(dst[edge_idx]), int(mag[edge_idx]), bool(exc[edge_idx])))
+
+    mem = np.zeros(total_nodes, dtype=np.int64)
+    fired = np.zeros(total_nodes, dtype=bool)
+    queue: list[tuple[int, int, bool]] = []
+    active = np.flatnonzero(np.asarray(image).reshape(-1) > input_threshold)
+    queue.extend((int(node), input_weight, True) for node in active)
+    output_order: list[int] = []
+    output_score = np.zeros(n_output, dtype=np.int64)
+    deployment_keys = getattr(deployment, "files", deployment.keys())
+    score_readout = (
+        "output_readout" in deployment_keys and
+        str(np.asarray(deployment["output_readout"]).item()) ==
+        "nonnegative_weight_score_argmax"
+    )
+    head = 0
+    while head < len(queue):
+        node, weight, is_exc = queue[head]
+        head += 1
+        if score_readout and output_offset <= node < output_offset + n_output:
+            output_score[node - output_offset] += int(weight) if is_exc else -int(weight)
+            continue
+        if is_exc:
+            mem[node] = min(0xFFFF, int(mem[node]) + int(weight))
+        else:
+            mem[node] = max(0, int(mem[node]) - int(weight))
+        can_fire = not fire_once or not fired[node]
+        if is_exc and can_fire and mem[node] >= threshold:
+            mem[node] = 0
+            fired[node] = True
+            if output_offset <= node < output_offset + n_output:
+                output_order.append(node - output_offset)
+            queue.extend(adjacency[node])
+
+    counts = np.bincount(output_order, minlength=n_output).astype(np.int64)
+    pred = int(np.argmax(output_score)) if score_readout else None
+    if not score_readout and output_order:
+        max_count = int(counts.max())
+        tied = set(np.flatnonzero(counts == max_count).tolist())
+        pred = next(cls for cls in output_order if cls in tied)
+    return {
+        "pred": pred,
+        "output_order": [int(x) for x in output_order],
+        "output_counts": counts.astype(int).tolist(),
+        "fired_nodes": int(np.count_nonzero(fired)),
+        "processed_events": int(head),
+        "fired_hidden": int(np.count_nonzero(fired[n_input:output_offset])),
+        "output_score": output_score.astype(int).tolist(),
+    }
+
+
+def classify_bp_output_spikes(output_spikes: list[dict],
+                              output_hw_ids: np.ndarray) -> dict:
+    hw_to_class = {int(hw): cls for cls, hw in enumerate(np.asarray(output_hw_ids).reshape(-1))}
+    order = [hw_to_class[int(spike.get("neuron_id", -1))]
+             for spike in output_spikes
+             if int(spike.get("neuron_id", -1)) in hw_to_class]
+    counts = np.bincount(order, minlength=len(hw_to_class)).astype(np.int64)
+    pred = None
+    if order:
+        max_count = int(counts.max())
+        tied = set(np.flatnonzero(counts == max_count).tolist())
+        pred = next(cls for cls in order if cls in tied)
+    return {"pred": pred, "order": order, "counts": counts.astype(int).tolist()}
+
+
+def decode_signed_u32(value: int) -> int:
+    value = int(value) & 0xFFFF_FFFF
+    return value - (1 << 32) if value & 0x8000_0000 else value
+
+
+def run_bp_deployment(args, deployment, deploy_path: str, bit_path: str,
+                      hwh_path: str, result_path: str, profile_path: str | None,
+                      util_report: dict, power_report: dict) -> None:
+    """Run mapped 784->1000->10 BP inference with the standard diagnostics."""
+    if int(args.packet_id_width) != int(legacy.HLS_SPIKE_PKT_ID_W):
+        raise ValueError(
+            f"--packet-id-width={args.packet_id_width} does not match the HLS AXIS "
+            f"packet format ({legacy.HLS_SPIKE_PKT_ID_W})"
+        )
+    test_imgs, test_lbls = load_bp_dataset(deployment, args.dataset)
+    n_input = int(deployment["n_input"])
+    n_hidden = int(deployment["n_hidden"])
+    n_output = int(deployment["n_output"])
+    total_nodes = n_input + n_hidden + n_output
+    if (n_input, n_hidden, n_output) != (784, 1000, 10):
+        raise ValueError(f"expected 784->1000->10, got {n_input}->{n_hidden}->{n_output}")
+    if int(deployment["local_id_width"]) != int(args.local_id_width):
+        raise ValueError("deployment and RTL local ID widths differ")
+    if int(deployment["format_version"]) < 2:
+        raise ValueError("reconvert the model: BP score readout requires deployment format v2")
+    output_readout = str(np.asarray(deployment["output_readout"]).item())
+    if output_readout != "nonnegative_weight_score_argmax":
+        raise ValueError(f"unsupported BP output readout: {output_readout}")
+    timesteps = int(deployment["timesteps"])
+    software_leak = float(deployment["software_leak"])
+    input_encoding = str(np.asarray(deployment["input_encoding"]).item())
+    if timesteps != 1 or software_leak != 0.0 or input_encoding != "deterministic_threshold":
+        raise ValueError(
+            "BP deployment requires T=1, leak=0 and deterministic_threshold; "
+            f"got T={timesteps}, leak={software_leak:g}, encoding={input_encoding}"
+        )
+
+    n_images = min(len(test_imgs), int(args.n) if int(args.n) > 0 else len(test_imgs))
+    hw_threshold = int(deployment["hw_threshold"])
+    input_threshold = float(deployment["input_threshold"])
+    input_weight = int(deployment["input_spike_weight"])
+    input_hw_ids = np.asarray(deployment["input_hw_ids"], dtype=np.int32)
+    output_hw_ids = np.asarray(deployment["output_hw_ids"], dtype=np.int32)
+    pl_clock_hz = (float(args.pl_clock_hz) if float(args.pl_clock_hz) > 0.0
+                   else float(args.pl_clock_mhz) * 1_000_000.0)
+
+    print("=" * 100)
+    print("10-Class MNIST FPGA Inference  (mapped BP 784->1000->10 core-group route)")
+    print("=" * 100)
+    print(f"\nLoading: {deploy_path}")
+    print(f"  Network: {n_input}->{n_hidden}->{n_output}  "
+          f"nodes={total_nodes} edges={len(deployment['edge_src'])}")
+    print(f"  Input: pixel>{input_threshold:g}  weight={input_weight}  "
+          f"threshold={hw_threshold}  images={n_images}")
+    print(f"  HLS packet_id_width: {args.packet_id_width}  "
+          f"RTL local_id_width: {args.local_id_width}")
+
+    if not args.no_program:
+        print(f"\nProgramming FPGA: {bit_path}")
+        if not os.path.exists(bit_path):
+            raise FileNotFoundError(bit_path)
+        if not legacy.program_fpga(bit_path):
+            raise RuntimeError("FPGA programming failed")
+    else:
+        print("\n(--no-program: skipping FPGA programming)")
+
+    hwh_meta = parse_hwh_metadata(hwh_path)
+    hls = legacy.MMIO(HLS_BASE, 0x100)
+    cfg = legacy.MMIO(CFG_BASE, 0x100)
+    dma = legacy.MMIO(DMA_BASE, 0x100)
+    cfg_ver = int(cfg.read(CFG_VERSION))
+    profile_info = int(cfg.read(CFG_PROFILE_INFO))
+    profile_version = (profile_info >> 24) & 0xFF
+    profile_num_groups = ((profile_info >> 16) & 0xFF
+                          if profile_info != 0xDEADBEEF else 0)
+    profile_enabled = profile_path is not None
+    if profile_version < 13:
+        raise RuntimeError(
+            f"BP score readout requires PROFILE_INFO version 13+, got {profile_version}; "
+            "rebuild and copy the updated bit/hwh files"
+        )
+    print(f"  snn_config_regs version: 0x{cfg_ver:08X}")
+    print(f"  profile info: 0x{profile_info:08X}  version={profile_version} "
+          f"groups={profile_num_groups} counters={profile_info & 0xFFFF}")
+    if profile_enabled and profile_num_groups == 0:
+        raise RuntimeError("--profile-output requested, but the profile window is unavailable")
+
+    print("\nWarm-up and reset ...")
+    legacy.warmup_hls(
+        hls, poll_sleep_s=(0.001 if args.benchmark_fast else 0.005),
+        post_sleep_s=(0.0 if args.benchmark_fast else 0.010))
+    legacy.reset_system(
+        hls, cfg, assert_hls_reset=args.assert_hls_reset,
+        poll_sleep_s=(0.0002 if args.benchmark_fast else 0.001),
+        post_sleep_s=(0.0 if args.benchmark_fast else 0.002))
+
+    print("Programming mapped local/CT connections ...")
+    route_cfg = program_bp_coregroup_package(cfg, deployment)
+    legacy.configure_neurons(cfg, threshold=hw_threshold, leak=0, refrac=0)
+    print(f"  writes={route_cfg['writes']} local={route_cfg['intra_writes']} "
+          f"CT={route_cfg['ct_writes']} score={route_cfg['score_writes']} "
+          f"config_ms={route_cfg['config_ms']:.3f}")
+    print_diagnostics(hls, cfg, dma, hwh_meta, profile_info)
+
+    capture_capacity = total_nodes + 64
+    buffer_bytes = capture_capacity * 4 + 64
+    buf_in = legacy.make_dma_buffer(DMA_BUF_IN, buffer_bytes, label="MM2S")
+    buf_out = legacy.make_dma_buffer(DMA_BUF_OUT, buffer_bytes, label="S2MM")
+    results = []
+    hw_correct = sw_sync_correct = sw_event_correct = 0
+    hw_sync_match = hw_event_match = 0
+    score_exact_match = 0
+    score_total_abs_error = 0
+    score_max_abs_error = 0
+    iter_ms = []
+    t_start = time.time()
+
+    print(f"\nRunning {n_images} inference{'s' if n_images != 1 else ''} ...")
+    print("-" * 112)
+    print(f"{'idx':>5} {'lbl':>4} {'sync':>5} {'event':>5} {'hw':>4} {'score':>5} | "
+          f"{'router':>7} {'neuron':>7} {'hls_in':>7} {'lat':>8} {'svc':>8} "
+          f"{'mm2s':>10} {'s2mm':>10} {'cfg':>8} {'ms':>9}")
+    print("-" * 112)
+    try:
+        for idx in range(n_images):
+            t_iter0 = time.perf_counter()
+            image = test_imgs[idx]
+            label = int(test_lbls[idx])
+            t_sw0 = time.perf_counter()
+            sync_ref = bp_sync_reference(image, deployment)
+            event_ref = bp_event_reference(
+                image, deployment, fire_once=not args.allow_repeat_fire_reference)
+            t_sw1 = time.perf_counter()
+            t_pack0 = time.perf_counter()
+            words = build_bp_input_spike_words(
+                image, input_hw_ids, input_threshold, input_weight,
+                int(args.packet_id_width))
+            t_pack1 = time.perf_counter()
+            ctr_router_base = int(cfg.read(CFG_ROUTER_SPKS))
+            ctr_neuron_base = int(cfg.read(CFG_NEURON_SPKS))
+            hw = legacy.run_inference(
+                hls, cfg, dma, spike_words=words,
+                n_neurons=capture_capacity, hw_threshold=hw_threshold,
+                hls_spike_pkt_id_w=int(args.packet_id_width),
+                capture_all_spikes=False, buf_in=buf_in, buf_out=buf_out,
+                ctr_router_base=ctr_router_base, ctr_neuron_base=ctr_neuron_base,
+                first_spike_timeout_s=float(args.first_spike_timeout_ms) / 1000.0,
+                further_spike_timeout_s=float(args.further_spike_timeout_ms) / 1000.0,
+                mm2s_tail_timeout_s=float(args.mm2s_tail_timeout_ms) / 1000.0,
+                mm2s_tail_poll_s=(0.0002 if args.benchmark_fast else 0.005),
+                settle_cap_s=float(args.settle_cap_ms) / 1000.0,
+                stop_sleep_s=float(args.stop_sleep_ms) / 1000.0,
+                dma_reset_sleep_s=(0.0002 if args.benchmark_fast else 0.002),
+                profile_enabled=profile_enabled,
+                profile_num_groups=profile_num_groups,
+                profile_drain_timeout_s=max(
+                    0.1, float(args.mm2s_tail_timeout_ms) / 1000.0),
+                sample_clear_on_stop=not args.no_per_image_reset,
+                wait_hls_input_count=True,
+                hls_input_timeout_s=max(
+                    0.1, float(args.hls_input_timeout_ms) / 1000.0))
+            decoded = classify_bp_output_spikes(hw.get("output_spikes", []), output_hw_ids)
+            profile = hw.get("profile", {})
+            sw_scores = np.asarray(event_ref["output_score"], dtype=np.int64)
+            hw_scores = np.asarray([
+                decode_signed_u32(profile.get(f"class_{cls}_score", 0))
+                for cls in range(n_output)
+            ], dtype=np.int64)
+            hw_pred = int(np.argmax(hw_scores))
+            score_delta = hw_scores - sw_scores
+            score_exact = bool(np.array_equal(hw_scores, sw_scores))
+            score_abs_max = int(np.max(np.abs(score_delta)))
+            score_exact_match += int(score_exact)
+            score_total_abs_error += int(np.abs(score_delta).sum())
+            score_max_abs_error = max(score_max_abs_error, score_abs_max)
+            sync_pred = int(sync_ref["pred"])
+            event_pred = event_ref["pred"]
+            hw_correct += int(hw_pred == label)
+            sw_sync_correct += int(sync_pred == label)
+            sw_event_correct += int(event_pred == label)
+            hw_sync_match += int(hw_pred == sync_pred)
+            hw_event_match += int(hw_pred == event_pred)
+            t_iter1 = time.perf_counter()
+            wall_ms = (t_iter1 - t_iter0) * 1000.0
+            iter_ms.append(wall_ms)
+            timing = dict(hw.get("timing", {}))
+            timing.update({
+                "sw_ref_ms": (t_sw1 - t_sw0) * 1000.0,
+                "spike_pack_ms": (t_pack1 - t_pack0) * 1000.0,
+                "iter_wall_ms": wall_ms,
+            })
+            cfg_status = int(cfg.read(CFG_STATUS))
+            row = {
+                "idx": idx, "label": label, "input_words": int(len(words)),
+                "sw_sync_pred": sync_pred, "sw_event_pred": event_pred,
+                "hw_pred": hw_pred,
+                "sw_sync_output_score": sync_ref["output_score"],
+                "sw_event_output_order": event_ref["output_order"],
+                "hw_output_order": decoded["order"],
+                "hw_output_counts": decoded["counts"],
+                "sw_event_output_score": sw_scores.astype(int).tolist(),
+                "hw_output_scores": hw_scores.astype(int).tolist(),
+                "score_delta": score_delta.astype(int).tolist(),
+                "score_exact_match": score_exact,
+                "score_max_abs_error": score_abs_max,
+                "captured_spikes": len(hw.get("output_spikes", [])),
+                "router_spikes": int(hw.get("router_spikes", 0)),
+                "neuron_spikes": int(hw.get("neuron_spikes", 0)),
+                "hls_spike_count": int(hw.get("hls_spike_count", 0)),
+                "pl_latency_cycles": int(hw.get("pl_latency_cycles", 0)),
+                "pl_service_cycles": hw.get("pl_service_cycles"),
+                "mm2s_sr": int(hw.get("mm2s_sr", 0)),
+                "s2mm_sr": int(hw.get("s2mm_sr", 0)),
+                "mm2s_done": bool(hw.get("mm2s_done", False)),
+                "hls_input_done": bool(hw.get("hls_input_done", False)),
+                "profile_incomplete": bool(hw.get("profile_incomplete", False)),
+                "cfg_status": cfg_status,
+                "profile": hw.get("profile", {}),
+                "timing": timing,
+            }
+            results.append(row)
+            if idx % max(1, int(args.print_every)) == 0 or idx == n_images - 1:
+                svc = int(hw["pl_service_cycles"]) if hw.get("pl_service_cycles") else 0
+                print(f"{idx:>5d} {label:>4d} {sync_pred:>5d} "
+                      f"{str(event_pred):>5s} {str(hw_pred):>4s} "
+                      f"{'EXACT' if score_exact else 'DIFF':>5s} | "
+                      f"{row['router_spikes']:>7d} {row['neuron_spikes']:>7d} "
+                      f"{row['hls_spike_count']:>7d} {row['pl_latency_cycles']:>8d} "
+                      f"{svc:>8d} 0x{row['mm2s_sr']:08X} 0x{row['s2mm_sr']:08X} "
+                      f"0x{cfg_status:06X} {wall_ms:>9.3f}")
+    finally:
+        buf_in.close()
+        buf_out.close()
+
+    elapsed = time.time() - t_start
+    denom = max(n_images, 1)
+    latency = [r["pl_latency_cycles"] for r in results if r["pl_latency_cycles"] > 0]
+    service = [int(r["pl_service_cycles"]) for r in results
+               if r["pl_service_cycles"] is not None and int(r["pl_service_cycles"]) > 0]
+
+    def mean(values):
+        return float(sum(values)) / len(values) if values else None
+
+    def timing_mean(name):
+        values = [float(r["timing"][name]) for r in results if name in r["timing"]]
+        return mean(values)
+
+    lat_mean = mean(latency)
+    svc_mean = mean(service)
+    lat_ms = None if lat_mean is None else lat_mean / pl_clock_hz * 1000.0
+    svc_ms = None if svc_mean is None else svc_mean / pl_clock_hz * 1000.0
+    first_output_throughput = None if not lat_ms else 1000.0 / lat_ms
+    throughput = None if not svc_ms else 1000.0 / svc_ms
+    profile_totals = {}
+    for row in results:
+        for key, value in row["profile"].items():
+            if isinstance(value, (int, np.integer)):
+                profile_totals[key] = profile_totals.get(key, 0) + int(value)
+    ct_ops = int(profile_totals.get("ct_valid_entry_count", 0))
+    intra_ops = int(profile_totals.get("intra_weight_nonzero_count", 0))
+    synaptic_ops_total = ct_ops + intra_ops
+    ops_per_image = synaptic_ops_total / denom
+    service_gsops = (ops_per_image * throughput / 1.0e9
+                     if throughput is not None else None)
+    peak_sops_per_cycle = (
+        max(0, int(args.peak_router_lanes)) +
+        max(0, int(args.peak_intra_lanes_per_group)) * profile_num_groups)
+    peak_gsops = pl_clock_hz * peak_sops_per_cycle / 1.0e9
+    service_util = (service_gsops / peak_gsops * 100.0
+                    if service_gsops is not None and peak_gsops > 0 else None)
+    pl_dynamic_w = (power_report.get("pl_dynamic_w")
+                    if power_report.get("available") else None)
+    service_gsops_per_w = (
+        service_gsops / float(pl_dynamic_w)
+        if service_gsops is not None and pl_dynamic_w not in (None, 0) else None)
+
+    print("=" * 100)
+    print(f"\nResults ({n_images} images, {elapsed:.3f}s, "
+          f"{elapsed/denom*1000.0:.3f} ms/img):")
+    print(f"  SW INT8 sync accuracy:  {sw_sync_correct}/{n_images} "
+          f"({100.0*sw_sync_correct/denom:.2f}%)")
+    print(f"  SW event accuracy:      {sw_event_correct}/{n_images} "
+          f"({100.0*sw_event_correct/denom:.2f}%)")
+    print(f"  HW accuracy:            {hw_correct}/{n_images} "
+          f"({100.0*hw_correct/denom:.2f}%)")
+    print(f"  HW/SW sync match:       {hw_sync_match}/{n_images} "
+          f"({100.0*hw_sync_match/denom:.2f}%)")
+    print(f"  HW/SW event match:      {hw_event_match}/{n_images} "
+          f"({100.0*hw_event_match/denom:.2f}%)")
+    print(f"  Exact 10-score parity:  {score_exact_match}/{n_images} "
+          f"({100.0*score_exact_match/denom:.2f}%)")
+    print(f"  Score absolute error:   total={score_total_abs_error} "
+          f"max_element={score_max_abs_error}")
+    print(f"  Total input/router/neuron spikes: "
+          f"{sum(r['input_words'] for r in results)}/"
+          f"{sum(r['router_spikes'] for r in results)}/"
+          f"{sum(r['neuron_spikes'] for r in results)}")
+    print(f"  DMA incomplete:         mm2s={sum(not r['mm2s_done'] for r in results)} "
+          f"hls_input={sum(not r['hls_input_done'] for r in results)} "
+          f"profile={sum(r['profile_incomplete'] for r in results)}")
+    if lat_mean is not None:
+        print(f"  PL first-output latency: mean={lat_mean:.1f} cycles "
+              f"({lat_ms:.6f} ms), min={min(latency)}, max={max(latency)}")
+        print(f"  PL first-output throughput: {first_output_throughput:.2f} img/s")
+    if svc_mean is not None:
+        print(f"  PL service latency:      mean={svc_mean:.1f} cycles "
+              f"({svc_ms:.6f} ms), min={min(service)}, max={max(service)}")
+        print(f"  PL service throughput:   {throughput:.2f} img/s")
+    print("  PL compute estimate:")
+    print(f"    synaptic_ops_total:     {synaptic_ops_total} "
+          f"(CT={ct_ops}, intra={intra_ops})")
+    print(f"    synaptic_ops/image:     {ops_per_image:.3f}")
+    print(f"    peak_sops_per_cycle:    {peak_sops_per_cycle}")
+    print(f"    peak_GSOP/S:            {peak_gsops:.6f}")
+    if service_gsops is not None:
+        print(f"    service_GSOP/S:         {service_gsops:.6f}")
+        print(f"    service/peak_util:      {service_util:.4f}%")
+    print("  Host timing mean per image:")
+    for key in ("iter_wall_ms", "sw_ref_ms", "spike_pack_ms", "run_total_ms",
+                "dma_reset_ms", "stream_poll_ms", "mm2s_tail_wait_ms",
+                "hls_input_wait_ms", "settle_wait_ms", "stop_wait_ms",
+                "counter_read_ms", "tracked_sleep_ms_total"):
+        value = timing_mean(key)
+        print(f"    {key + ':':24s} {value:.6f}" if value is not None
+              else f"    {key + ':':24s} N/A")
+    print("  Profile totals:")
+    for key in sorted(profile_totals):
+        print(f"    {key + ':':36s} {profile_totals[key]}")
+    if util_report.get("available"):
+        print("  Vivado resource utilization:")
+        print(f"    LUT:  {util_report.get('lut')}/{util_report.get('lut_available')} "
+              f"({util_report.get('lut_util_percent'):.2f}%)")
+        print(f"    FF:   {util_report.get('ff')}/{util_report.get('ff_available')} "
+              f"({util_report.get('ff_util_percent'):.2f}%)")
+        print(f"    BRAM: {util_report.get('bram')}/{util_report.get('bram_available')} "
+              f"({util_report.get('bram_util_percent'):.2f}%)")
+        print(f"    DSP:  {util_report.get('dsp')}/{util_report.get('dsp_available')} "
+              f"({util_report.get('dsp_util_percent'):.2f}%)")
+    if power_report.get("available"):
+        print("  Vivado power estimate:")
+        print(f"    total_on_chip_w:        {power_report.get('total_on_chip_w')}")
+        print(f"    dynamic_w:              {power_report.get('dynamic_w')}")
+        print(f"    device_static_w:        {power_report.get('device_static_w')}")
+        print(f"    ps7_dynamic_w:          {power_report.get('ps7_dynamic_w')}")
+        print(f"    pl_dynamic_w_excl_ps7:  {pl_dynamic_w}")
+        if service_gsops_per_w is not None:
+            print(f"    service_GSOP/S/W:       {service_gsops_per_w:.6f}")
+    print_diagnostics(hls, cfg, dma, hwh_meta, profile_info)
+
+    summary = {
+        "mode": "bp_coregroup_784_1000_10", "images": n_images,
+        "elapsed_s": elapsed, "ms_per_image": elapsed / denom * 1000.0,
+        "deployment": deploy_path, "bitstream": bit_path, "hwh": hwh_meta,
+        "programming": route_cfg,
+        "hw_accuracy": 100.0 * hw_correct / denom,
+        "sw_sync_accuracy": 100.0 * sw_sync_correct / denom,
+        "sw_event_accuracy": 100.0 * sw_event_correct / denom,
+        "hw_sync_match": 100.0 * hw_sync_match / denom,
+        "hw_event_match": 100.0 * hw_event_match / denom,
+        "score_exact_match_count": score_exact_match,
+        "score_exact_match_percent": 100.0 * score_exact_match / denom,
+        "score_total_abs_error": score_total_abs_error,
+        "score_max_abs_error": score_max_abs_error,
+        "pl_clock_hz": pl_clock_hz, "pl_latency_cycles_mean": lat_mean,
+        "pl_service_cycles_mean": svc_mean,
+        "pl_first_output_throughput_img_s": first_output_throughput,
+        "pl_service_throughput_img_s": throughput,
+        "pl_compute_estimate": {
+            "synaptic_ops_total": synaptic_ops_total,
+            "synaptic_ops_per_image": ops_per_image,
+            "peak_sops_per_cycle": peak_sops_per_cycle,
+            "peak_gsops": peak_gsops,
+            "service_gsops": service_gsops,
+            "service_peak_util_percent": service_util,
+            "service_gsops_per_w": service_gsops_per_w,
+        },
+        "profile_totals": profile_totals, "rows": results,
+    }
+    os.makedirs(os.path.dirname(result_path) or ".", exist_ok=True)
+    with open(result_path, "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2)
+    if profile_path:
+        os.makedirs(os.path.dirname(profile_path) or ".", exist_ok=True)
+        profile_rows = []
+        for row in results:
+            flat = {k: v for k, v in row.items()
+                    if k not in ("profile", "timing", "sw_sync_output_score",
+                                 "sw_event_output_order", "hw_output_order",
+                                 "hw_output_counts")}
+            flat.update({f"timing_{k}": v for k, v in row["timing"].items()})
+            flat.update(row["profile"])
+            profile_rows.append(flat)
+        fields = sorted({key for row in profile_rows for key in row})
+        with open(profile_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=fields)
+            writer.writeheader()
+            writer.writerows(profile_rows)
+    print(f"Saved results: {result_path}")
+    if profile_path:
+        print(f"Saved profile CSV: {profile_path}")
+
+
 def decode_cfg_status(status: int) -> dict:
     return {
         "fifo_overflow": bool(status & 0x1),
@@ -1417,13 +2015,17 @@ def print_diagnostics(hls: legacy.MMIO,
 
 def parse_args():
     p = argparse.ArgumentParser(description="10-class MNIST inference on snn_core_group_profile bitstream")
-    p.add_argument("--data", default="/home/xilinx/snn", help="Directory containing bit/hwh/npz")
+    p.add_argument("--data", default=".", help="Directory containing bit/hwh/npz (default: current directory)")
     p.add_argument("--bitstream", default=None, help="Override bitstream path")
     p.add_argument("--weights", default=None, help="Override deployment .npz path")
+    p.add_argument("--dataset", default=None,
+                   help="BP mode: NPZ containing test_imgs/test_lbls")
     p.add_argument("--n", type=int, default=0, help="Number of images to run (0=all)")
     p.add_argument("--no-program", action="store_true", help="Skip FPGA programming")
     p.add_argument("--output", default=None, help="JSON output path")
-    p.add_argument("--profile-output", default="/home/xilinx/snn/profile_coregroup.csv", help="CSV profile output path")
+    p.add_argument("--profile-output", default=None,
+                   help="CSV profile output path (default: <data>/profile_coregroup.csv)")
+    p.add_argument("--no-profile", action="store_true", help="Disable profile CSV output")
     p.add_argument("--packet-id-width", type=int, default=DEFAULT_HLS_PACKET_ID_WIDTH)
     p.add_argument("--local-id-width", type=int, default=DEFAULT_LOCAL_ID_WIDTH)
     p.add_argument("--neuron-map", choices=["contiguous", "round-robin"], default="round-robin",
@@ -1448,6 +2050,8 @@ def parse_args():
     p.add_argument("--max-fanout-inter", type=int, default=DEFAULT_MAX_FANOUT_INTER,
                    help="Hardware MAX_FANOUT_INTER; one slot is reserved for the invalid terminator")
     p.add_argument("--capture-all-spikes", action="store_true")
+    p.add_argument("--allow-repeat-fire-reference", action="store_true",
+                   help="BP mode: allow repeated firing in the event SW reference")
     p.add_argument("--assert-hls-reset", action="store_true")
     p.add_argument("--clear-intra", action="store_true",
                    help="Explicitly zero intra-group recurrent rows used by the model")
@@ -1475,6 +2079,16 @@ def parse_args():
     return p.parse_args()
 
 
+def resolve_data_path(data_dir: str, value: str | None, default_name: str) -> str:
+    """Resolve board files consistently while preserving explicit absolute paths."""
+    candidate = default_name if value is None else os.path.expanduser(value)
+    if os.path.isabs(candidate):
+        return candidate
+    if value is not None and os.path.exists(candidate):
+        return candidate
+    return os.path.join(data_dir, candidate)
+
+
 def main() -> None:
     args = parse_args()
     require_compatible_legacy()
@@ -1490,12 +2104,14 @@ def main() -> None:
         if args.stop_sleep_ms == legacy.STOP_SLEEP_MS_DEFAULT:
             args.stop_sleep_ms = legacy.STOP_SLEEP_MS_FAST
 
-    data_dir = args.data
-    bit_path = args.bitstream or os.path.join(data_dir, "snn_core_group_profile.bit")
+    data_dir = os.path.abspath(os.path.expanduser(args.data))
+    bit_path = resolve_data_path(data_dir, args.bitstream, "snn_core_group_profile.bit")
     hwh_path = bit_path.replace(".bit", ".hwh")
-    deploy_path = args.weights or os.path.join(data_dir, "mnist_10class_deployment.npz")
-    result_path = args.output or os.path.join(data_dir, "mnist_10class_coregroup_results.json")
-    profile_path = args.profile_output
+    deploy_path = resolve_data_path(data_dir, args.weights, "mnist_10class_deployment.npz")
+    result_path = resolve_data_path(
+        data_dir, args.output, "mnist_10class_coregroup_results.json")
+    profile_path = (None if args.no_profile else resolve_data_path(
+        data_dir, args.profile_output, "profile_coregroup.csv"))
     util_report_path = args.util_report or default_report_path(
         data_dir, "snn_core_group_profile_utilization.rpt")
     power_report_path = args.power_report or default_report_path(
@@ -1511,6 +2127,24 @@ def main() -> None:
         print(f"ERROR: deployment file not found: {deploy_path}")
         sys.exit(1)
     data = np.load(deploy_path, allow_pickle=True)
+    if is_bp_coregroup_deployment(data):
+        if args.output is None:
+            result_path = os.path.join(data_dir, "bp_coregroup_results.json")
+        if args.dataset is not None:
+            args.dataset = resolve_data_path(data_dir, args.dataset, args.dataset)
+        elif "test_imgs" not in data.files or "test_lbls" not in data.files:
+            deploy_name = os.path.basename(deploy_path)
+            inferred_name = (deploy_name.replace("_deployment.npz", "_dataset.npz")
+                             if deploy_name.endswith("_deployment.npz") else "")
+            candidates = [
+                os.path.join(data_dir, inferred_name) if inferred_name else "",
+                os.path.join(data_dir, "mnist_10class_deployment_100n.npz"),
+            ]
+            args.dataset = next((path for path in candidates if path and os.path.exists(path)), None)
+        run_bp_deployment(
+            args, data, deploy_path, bit_path, hwh_path, result_path,
+            profile_path, util_report, power_report)
+        return
     q_weights = data["q_weights"]
     test_imgs = data["test_imgs"]
     test_lbls = data["test_lbls"]
@@ -1612,9 +2246,9 @@ def main() -> None:
             f"version={profile_version} groups={profile_num_groups} "
             f"counters={profile_counter_count}"
         )
-        if profile_enabled and profile_version not in (9, 10, 11, 12):
+        if profile_enabled and profile_version not in (9, 10, 11, 12, 13):
             print("ERROR: this script expects the current core-group/profile "
-                  "bitstream with PROFILE_INFO version=9 or BASIC version=10/11/12.")
+                  "bitstream with PROFILE_INFO version=9 or BASIC version=10/11/12/13.")
             print("  version=6 was the temporary relay experiment and can deadlock/slow the run; "
                   "rebuild and redeploy the current RTL/HWH/bit files.")
             sys.exit(1)
@@ -1798,6 +2432,7 @@ def main() -> None:
             profile_enabled=profile_enabled,
             profile_num_groups=profile_num_groups,
             profile_drain_timeout_s=max(0.100, float(args.mm2s_tail_timeout_ms) / 1000.0),
+            sample_clear_on_stop=True,
             wait_hls_input_count=True,
             hls_input_timeout_s=max(0.100, float(args.hls_input_timeout_ms) / 1000.0),
         )

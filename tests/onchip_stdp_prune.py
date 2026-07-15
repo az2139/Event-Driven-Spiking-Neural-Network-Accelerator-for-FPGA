@@ -63,11 +63,11 @@ class SpikeSTE(torch.autograd.Function):
 
 
 class BPPruneNet(nn.Module):
-    """784 -> hidden -> 10 SNN-style MLP trained by surrogate BP."""
+    """Event-driven hidden layer followed by a non-spiking score readout."""
 
     def __init__(self, n_input=784, hidden_size=1000, n_classes=10,
                  hidden_threshold=1.0, output_threshold=1.0,
-                 leak=0.5, surrogate_scale=10.0):
+                 leak=0.0, surrogate_scale=10.0):
         super().__init__()
         self.n_input = n_input
         self.hidden_size = hidden_size
@@ -81,55 +81,77 @@ class BPPruneNet(nn.Module):
         self.fc2 = nn.Linear(hidden_size, n_classes, bias=False)
         nn.init.xavier_uniform_(self.fc1.weight)
         nn.init.xavier_uniform_(self.fc2.weight)
+        with torch.no_grad():
+            self.fc2.weight.abs_()
 
     def spike(self, x):
         return SpikeSTE.apply(x, self.surrogate_scale)
 
-    def forward(self, spikes, fc1_mask=None, fc2_mask=None):
+    def forward(self, spikes, fc1_mask=None, fc2_mask=None,
+                random_event_order=None):
         """
         Args:
-            spikes: [B, T, 784] rate-encoded binary input.
+            spikes: [B, 1, 784] deterministic binary input events.
 
         Returns:
-            score: accumulated class activation, used for CE and score pred.
-            count: output spike count per class, used for count pred.
+            score: non-spiking class accumulators driven by hidden spikes.
+            active: score readouts which cross output_threshold (diagnostic only).
         """
         B, T, _ = spikes.shape
+        if T != 1:
+            raise ValueError("event-aware BP forward currently requires T=1")
+        if random_event_order is None:
+            random_event_order = self.training
         mem1 = torch.zeros(B, self.hidden_size, device=spikes.device)
-        mem2 = torch.zeros(B, self.n_classes, device=spikes.device)
+        fired1 = torch.zeros(B, self.hidden_size, device=spikes.device)
         score = torch.zeros(B, self.n_classes, device=spikes.device)
-        count = torch.zeros(B, self.n_classes, device=spikes.device)
         fc1_weight = self.fc1.weight if fc1_mask is None else self.fc1.weight * fc1_mask
         fc2_weight = self.fc2.weight if fc2_mask is None else self.fc2.weight * fc2_mask
+        frame = spikes[:, 0, :] > 0
+        active_count = frame.sum(dim=1)
+        max_events = int(active_count.max().item()) if B else 0
+        if random_event_order:
+            priority = torch.rand(B, self.n_input, device=spikes.device)
+        else:
+            priority = torch.arange(
+                self.n_input, device=spikes.device, dtype=torch.float32
+            ).unsqueeze(0).expand(B, -1)
+        priority = priority.masked_fill(~frame, float("inf"))
+        event_order = priority.argsort(dim=1)
 
-        for t in range(T):
-            x_t = spikes[:, t, :]
-
-            mem1 = (mem1 + F.linear(x_t, fc1_weight, None) - self.leak).clamp(min=0.0)
+        for event_idx in range(max_events):
+            pixel = event_order[:, event_idx]
+            valid = (event_idx < active_count).float().unsqueeze(1)
+            # Each sample may process a different pixel at this event position.
+            delta = fc1_weight[:, pixel].transpose(0, 1) * valid
+            mem1 = (mem1 + delta - self.leak * valid).clamp(min=0.0)
             spk1 = self.spike(mem1 - self.hidden_threshold)
+            spk1 = spk1 * valid * (1.0 - fired1)
+            fired1 = torch.clamp(fired1 + spk1.detach(), max=1.0)
             mem1 = mem1 * (1.0 - spk1.detach())
+            score = score + F.linear(spk1, fc2_weight, None)
 
-            cls_in = F.linear(spk1, fc2_weight, None)
-            score = score + cls_in
+        active = (score >= self.output_threshold).float()
+        return score, active
 
-            mem2 = (mem2 + cls_in - self.leak).clamp(min=0.0)
-            spk2 = self.spike(mem2 - self.output_threshold)
-            count = count + spk2
-            mem2 = mem2 * (1.0 - spk2.detach())
-
-        return score, count
+    def enforce_hardware_constraints(self):
+        """Keep the score readout monotonic under event arrival ordering."""
+        with torch.no_grad():
+            self.fc2.weight.clamp_(min=0.0)
 
 
 class BPPruneTrainer:
-    """BP wrapper using the same MNIST loading and rate encoding style."""
+    """BP wrapper using the deterministic input encoding used on the FPGA."""
 
     def __init__(self, n_input=784, hidden_size=1000, n_classes=10,
-                 timesteps=25, hidden_threshold=1.0, output_threshold=1.0,
-                 leak=0.5, surrogate_scale=10.0, device=DEVICE):
+                 timesteps=1, hidden_threshold=1.0, output_threshold=1.0,
+                 leak=0.0, surrogate_scale=10.0, input_threshold=0.3,
+                 device=DEVICE):
         self.n_input = n_input
         self.hidden_size = hidden_size
         self.n_classes = n_classes
         self.timesteps = timesteps
+        self.input_threshold = float(input_threshold)
         self.device = device
         self.net = BPPruneNet(
             n_input=n_input, hidden_size=hidden_size, n_classes=n_classes,
@@ -138,16 +160,20 @@ class BPPruneTrainer:
         self.fc1_mask = None
         self.fc2_mask = None
         self.mapping_history = []
+        self.best_epoch = -1
+        self.matching_mapping = ''
 
     def rate_encode(self, images):
         B = images.shape[0]
-        probs = images.unsqueeze(1).expand(B, self.timesteps, self.n_input)
-        return (torch.rand_like(probs) < probs).float()
+        frame = (images > self.input_threshold).float()
+        return frame.unsqueeze(1).expand(B, self.timesteps, self.n_input)
 
-    def forward(self, spikes, use_mask=True):
+    def forward(self, spikes, use_mask=True, random_event_order=None):
         fc1_mask = self.fc1_mask if use_mask else None
         fc2_mask = self.fc2_mask if use_mask else None
-        return self.net(spikes, fc1_mask=fc1_mask, fc2_mask=fc2_mask)
+        return self.net(
+            spikes, fc1_mask=fc1_mask, fc2_mask=fc2_mask,
+            random_event_order=random_event_order)
 
     @torch.no_grad()
     def test_batch(self, test_imgs, test_lbls, batch_size=256):
@@ -196,6 +222,65 @@ class BPPruneTrainer:
             'per_class_t': per_class_t,
         }
 
+    @torch.no_grad()
+    def test_int8_reference(self, test_imgs, test_lbls, batch_size=256,
+                            input_weight=255):
+        """Deterministic event-order hidden layer with INT8 score readout."""
+        if self.timesteps != 1:
+            raise ValueError("INT8 deployment reference requires timesteps=1")
+        if self.fc1_mask is None or self.fc2_mask is None:
+            raise ValueError("INT8 deployment reference requires pruning masks")
+
+        threshold = float(self.net.hidden_threshold)
+        scale = float(input_weight) / threshold
+        q1 = torch.round(self.net.fc1.weight * scale).clamp(-255, 255)
+        q2 = torch.round(self.net.fc2.weight * scale).clamp(-255, 255)
+        q1 = q1 * self.fc1_mask
+        q2 = q2 * self.fc2_mask
+        hw_threshold = int(round(threshold * scale))
+
+        flat = test_imgs.reshape(len(test_imgs), -1).to(self.device).float()
+        labels = test_lbls.to(self.device)
+        correct = 0
+        hidden_spikes = 0
+        active_readouts = 0
+        for start in range(0, len(flat), batch_size):
+            end = min(start + batch_size, len(flat))
+            frame = flat[start:end] > self.input_threshold
+            B = len(frame)
+            hidden_mem = torch.zeros(B, self.hidden_size, device=self.device)
+            hidden = torch.zeros(B, self.hidden_size, dtype=torch.bool,
+                                 device=self.device)
+            active_count = frame.sum(dim=1)
+            max_events = int(active_count.max().item()) if B else 0
+            priority = torch.arange(
+                self.n_input, device=self.device, dtype=torch.float32
+            ).unsqueeze(0).expand(B, -1).masked_fill(~frame, float("inf"))
+            event_order = priority.argsort(dim=1)
+            for event_idx in range(max_events):
+                pixel = event_order[:, event_idx]
+                valid = (event_idx < active_count).unsqueeze(1)
+                delta = q1[:, pixel].transpose(0, 1) * valid
+                hidden_mem = (hidden_mem + delta).clamp(min=0, max=65535)
+                new_spike = valid & ~hidden & (hidden_mem >= hw_threshold)
+                hidden |= new_spike
+                hidden_mem = hidden_mem.masked_fill(new_spike, 0)
+            output_score = F.linear(hidden.float(), q2, None)
+            pred = output_score.argmax(dim=1)
+            correct += (pred == labels[start:end]).sum().item()
+            hidden_spikes += hidden.sum().item()
+            active_readouts += (output_score >= hw_threshold).sum().item()
+
+        total = len(flat)
+        return {
+            'accuracy': correct / max(total, 1) * 100.0,
+            'hidden_spikes_per_sample': hidden_spikes / max(total, 1),
+            'active_readouts_per_sample': active_readouts / max(total, 1),
+            'samples': int(total),
+            'weight_scale': scale,
+            'hardware_threshold': hw_threshold,
+        }
+
     @staticmethod
     def _count_pred(count, score):
         # Score is the tie-breaker when multiple classes have equal counts.
@@ -213,14 +298,22 @@ class BPPruneTrainer:
                  fc2_mask=(np.asarray([], dtype=np.float32)
                            if self.fc2_mask is None else self.fc2_mask.detach().cpu().numpy()),
                  mapping_history=np.asarray(self.mapping_history, dtype=object),
+                 best_epoch=np.array(self.best_epoch, dtype=np.int32),
+                 matching_mapping=np.array(self.matching_mapping),
                  hidden_threshold=net.hidden_threshold,
                  output_threshold=net.output_threshold,
                  leak=net.leak,
                  timesteps=self.timesteps,
+                 input_encoding='deterministic_threshold',
+                 input_threshold=self.input_threshold,
+                 hidden_execution='event_serial_fire_once_reset_zero',
+                 training_event_order='random_per_sample',
+                 evaluation_event_order='ascending_input_id',
+                 output_readout='nonnegative_weight_score_argmax',
                  n_input=self.n_input,
                  hidden_size=self.hidden_size,
                  n_classes=self.n_classes,
-                 training='bp_surrogate_score_count')
+                 training='bp_surrogate_event_hidden_score_readout')
         print(f"  Saved -> {path}")
 
     def set_prune_masks(self, fc1_mask, fc2_mask):
@@ -231,6 +324,9 @@ class BPPruneTrainer:
         # New mainline keeps dense weights intact.  Masks are applied only in
         # forward(), so inactive edges can later regrow from their stored weight.
         return
+
+    def enforce_hardware_constraints(self):
+        self.net.enforce_hardware_constraints()
 
     def mask_gradients(self):
         if self.fc1_mask is not None and self.net.fc1.weight.grad is not None:
@@ -276,7 +372,7 @@ class FaithfulOnChipTrainer:
     """
 
     def __init__(self, n_input=784, n_classes=10, features_per_class=10,
-                 threshold=None, leak=0.5, timesteps=25,
+                 threshold=None, leak=0.0, timesteps=1, input_threshold=0.3,
                  lr_plus=0.005, lr_minus=0.003,
                  device=DEVICE):
         self.n_input = n_input
@@ -285,6 +381,7 @@ class FaithfulOnChipTrainer:
         self.n_output = n_classes * features_per_class
         self.device = device
         self.timesteps = timesteps
+        self.input_threshold = float(input_threshold)
         self.lr_plus = lr_plus
         self.lr_minus = lr_minus
         self.leak = leak
@@ -372,13 +469,12 @@ class FaithfulOnChipTrainer:
         self.thresholds.fill_(new_thr)
         print(f"  Calibrated threshold: {new_thr:.1f} (int8 equiv: {new_thr * SCALE:.0f})")
 
-    # -- Rate encoding (identical to SW) -----------------------------------
+    # -- Deterministic encoding used by the board input path ----------------
     def rate_encode(self, images):
         B = images.shape[0]
         T = self.timesteps
-        probs = images.unsqueeze(1).expand(B, T, self.n_input)
-        spikes = (torch.rand_like(probs) < probs).float()
-        return spikes
+        frame = (images > self.input_threshold).float()
+        return frame.unsqueeze(1).expand(B, T, self.n_input)
 
     # -- Forward pass (int8-quantized weights) -----------------------------
     @torch.no_grad()
@@ -585,6 +681,8 @@ class FaithfulOnChipTrainer:
                  decision_map=self.decision_map.cpu().numpy(),
                  threshold=self.base_threshold, leak=self.leak,
                  timesteps=self.timesteps, n_input=self.n_input,
+                 input_encoding='deterministic_threshold',
+                 input_threshold=self.input_threshold,
                  n_classes=self.n_classes,
                  features_per_class=self.features_per_class,
                  scale=SCALE)
@@ -733,12 +831,56 @@ def update_mapping_and_prune(trainer, input_rates, epoch, args, snapshot_prefix=
     return summary
 
 
+def write_matching_mapping(trainer, input_rates, args, path):
+    """Map the restored checkpoint without changing its deployment masks."""
+    if trainer.fc1_mask is None or trainer.fc2_mask is None:
+        raise RuntimeError("cannot write a deployment mapping without both pruning masks")
+
+    model = coregroup_mapping.model_from_arrays(
+        trainer.net.fc1.weight.detach().cpu().numpy(),
+        trainer.net.fc2.weight.detach().cpu().numpy(),
+    )
+    mapping = coregroup_mapping.run_mapping(
+        model=model,
+        input_rates=input_rates,
+        num_groups=args.map_num_groups,
+        neurons_per_group=args.map_neurons_per_group,
+        input_hidden_topk=args.map_input_hidden_topk,
+        hidden_output_topk=args.map_hidden_output_topk,
+        min_abs_weight=args.map_min_abs_weight,
+        fc1_mask=trainer.fc1_mask.detach().cpu().numpy(),
+        fc2_mask=trainer.fc2_mask.detach().cpu().numpy(),
+        load_cap=args.map_load_cap,
+        local_edge_cap=args.map_local_edge_cap,
+        lambda_load=args.map_lambda_load,
+        lambda_cap=args.map_lambda_cap,
+        lambda_balance=args.map_lambda_balance,
+        max_iter=args.map_max_iter,
+    )
+    ns = argparse.Namespace(
+        model="matching_best_training_checkpoint",
+        output=path,
+        num_groups=args.map_num_groups,
+        neurons_per_group=args.map_neurons_per_group,
+        input_hidden_topk=args.map_input_hidden_topk,
+        hidden_output_topk=args.map_hidden_output_topk,
+        load_cap=mapping["load_cap"],
+        local_edge_cap=mapping["local_edge_cap"],
+    )
+    coregroup_mapping.write_outputs(
+        path, mapping["graph"], mapping["neuron_group"],
+        mapping["neuron_local"], mapping["neuron_global_id"],
+        mapping["summary"], ns,
+    )
+    return mapping["summary"]
+
+
 def train_bp_model(trainer, train_imgs, train_lbls, epochs=50,
                    batch_size=128, save_path=None,
                    val_imgs=None, val_lbls=None, patience=10,
                    lr=1e-3, weight_decay=1e-4,
                    alternating_args=None):
-    """Surrogate-BP training loop for score/count output."""
+    """Surrogate-BP training for event-hidden, non-spiking score readout."""
     N = len(train_imgs)
     flat = train_imgs.reshape(N, -1).to(trainer.device).float()
     lbls = train_lbls.to(trainer.device)
@@ -747,10 +889,12 @@ def train_bp_model(trainer, train_imgs, train_lbls, epochs=50,
     optimizer = torch.optim.AdamW(
         trainer.net.parameters(), lr=lr, weight_decay=weight_decay)
 
-    best_metric = 0.0
+    best_metric = float("-inf")
     best_state = None
     best_fc1_mask = None
     best_fc2_mask = None
+    best_mapping_history = None
+    best_epoch = -1
     no_improve = 0
     input_rates = None
     snapshot_prefix = None
@@ -792,6 +936,7 @@ def train_bp_model(trainer, train_imgs, train_lbls, epochs=50,
             inactive_snapshot = trainer.snapshot_inactive_weights()
             optimizer.step()
             trainer.restore_inactive_weights(inactive_snapshot)
+            trainer.enforce_hardware_constraints()
 
             with torch.no_grad():
                 score_pred = score.argmax(dim=1)
@@ -818,22 +963,24 @@ def train_bp_model(trainer, train_imgs, train_lbls, epochs=50,
 
         if epoch % 2 == 0 or epoch == epochs - 1:
             val_str = (f"  ValScore={val_score_acc:5.1f}%"
-                       f"  ValCount={val_count_acc:5.1f}%") if has_val else ""
+                       f"  ValReadout={val_count_acc:5.1f}%") if has_val else ""
             print(f"  Epoch {epoch:3d}: Loss={train_loss:.4f}  "
                   f"TrainScore={train_score_acc:5.1f}%  "
-                  f"TrainCount={train_count_acc:5.1f}%{val_str}")
+                  f"TrainReadout={train_count_acc:5.1f}%{val_str}")
 
         metric = val_score_acc if has_val else train_score_acc
-        if metric > best_metric:
+        deployable = (input_rates is None or
+                      (trainer.fc1_mask is not None and trainer.fc2_mask is not None))
+        if deployable and metric > best_metric:
             best_metric = metric
+            best_epoch = epoch
             best_state = {k: v.detach().cpu().clone()
                           for k, v in trainer.net.state_dict().items()}
             best_fc1_mask = None if trainer.fc1_mask is None else trainer.fc1_mask.detach().cpu().clone()
             best_fc2_mask = None if trainer.fc2_mask is None else trainer.fc2_mask.detach().cpu().clone()
+            best_mapping_history = list(trainer.mapping_history)
             no_improve = 0
-            if save_path:
-                trainer.save_model(save_path)
-        else:
+        elif deployable:
             no_improve += 1
 
         if no_improve >= patience:
@@ -845,7 +992,30 @@ def train_bp_model(trainer, train_imgs, train_lbls, epochs=50,
         trainer.net.to(trainer.device)
         trainer.fc1_mask = None if best_fc1_mask is None else best_fc1_mask.to(trainer.device)
         trainer.fc2_mask = None if best_fc2_mask is None else best_fc2_mask.to(trainer.device)
+        trainer.mapping_history = ([] if best_mapping_history is None
+                                   else best_mapping_history)
         trainer.apply_prune_masks()
+        trainer.best_epoch = best_epoch
+        if input_rates is not None:
+            if not snapshot_prefix:
+                base = os.path.splitext(save_path or "bp_coregroup_mapping")[0]
+                snapshot_prefix = base + "_mapping"
+            mapping_path = f"{snapshot_prefix}_best.npz"
+            os.makedirs(os.path.dirname(mapping_path) or ".", exist_ok=True)
+            summary = write_matching_mapping(
+                trainer, input_rates, alternating_args, mapping_path)
+            trainer.matching_mapping = os.path.abspath(mapping_path)
+            print(f"  Best deployable checkpoint: epoch={best_epoch} "
+                  f"metric={best_metric:.2f}%")
+            print(f"  Matching mapping -> {mapping_path} "
+                  f"(local_event={summary['local_event_ratio']*100:.2f}%)")
+        if save_path:
+            trainer.save_model(save_path)
+    elif input_rates is not None:
+        raise RuntimeError(
+            "training ended before a deployable mapped checkpoint was produced; "
+            "reduce --map-warmup-epochs or increase --epochs"
+        )
     return trainer
 
 
@@ -958,10 +1128,14 @@ def main():
     ap.add_argument('--seed',          type=int,   default=42)
     ap.add_argument('--lr',            type=float, default=1e-3)
     ap.add_argument('--weight-decay',  type=float, default=1e-4)
-    ap.add_argument('--timesteps',     type=int,   default=25)
+    ap.add_argument('--timesteps',     type=int,   default=1,
+                    help='Deterministic input presentations per sample; current hardware uses 1')
+    ap.add_argument('--input-threshold', type=float, default=0.3,
+                    help='Emit an input spike when normalized pixel value exceeds this threshold')
     ap.add_argument('--hidden-threshold', type=float, default=1.0)
     ap.add_argument('--output-threshold', type=float, default=1.0)
-    ap.add_argument('--leak',          type=float, default=0.5)
+    ap.add_argument('--leak',          type=float, default=0.0,
+                    help='Software membrane leak; 0 matches the current deployment configuration')
     ap.add_argument('--surrogate-scale', type=float, default=10.0)
     ap.add_argument('--enable-alt-mapping-prune', action='store_true',
                     help='Alternate BP training with core-group mapping and cost-aware pruning')
@@ -999,6 +1173,10 @@ def main():
     ap.add_argument('--mapping-snapshot-prefix', default='',
                     help='Optional prefix for per-mapping .npz/.json snapshots')
     args = ap.parse_args()
+    if args.timesteps < 1:
+        ap.error('--timesteps must be at least 1')
+    if not 0.0 <= args.input_threshold <= 1.0:
+        ap.error('--input-threshold must be in [0, 1]')
 
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
@@ -1008,14 +1186,18 @@ def main():
     max_train = args.train_samples if args.train_samples > 0 else None
     max_test = args.test_samples if args.test_samples > 0 else None
 
-    mode = "BPScoreCount" if args.trainer == 'bp' else "FaithfulOnChip"
+    mode = "BPEventScore" if args.trainer == 'bp' else "FaithfulOnChip"
     print("=" * 70)
     print(f"Pruning SNN Trainer - Mode: {mode}")
     print("=" * 70)
     print(f"  Device:       {DEVICE}")
+    print(f"  Input:        deterministic pixel>{args.input_threshold:g}, "
+          f"T={args.timesteps}, leak={args.leak:g}")
     if args.trainer == 'bp':
         print(f"  Architecture: 784 -> {args.hidden_size} -> 10")
-        print("  Output:       class score + class spike count")
+        print("  Hidden:       event-serial, reset-to-zero, fire-once per sample")
+        print("  Event order:  random per sample in training, ascending ID in eval")
+        print("  Output:       nonnegative-weight score readout + argmax")
     else:
         n_output = args.neurons * 10
         print(f"  Architecture: 784 -> {n_output} ({args.neurons}/class x 10)")
@@ -1038,6 +1220,7 @@ def main():
             hidden_threshold=args.hidden_threshold,
             output_threshold=args.output_threshold,
             leak=args.leak, surrogate_scale=args.surrogate_scale,
+            input_threshold=args.input_threshold,
             device=DEVICE)
 
         print("\n[3] Pre-training test ...")
@@ -1045,7 +1228,7 @@ def main():
             test_imgs[:min(2000, len(test_imgs))],
             test_lbls[:min(2000, len(test_imgs))])
         print(f"  Pre-training score acc: {pre['score_acc']:.1f}%")
-        print(f"  Pre-training count acc: {pre['count_acc']:.1f}%")
+        print(f"  Pre-training readout acc: {pre['count_acc']:.1f}%")
 
         model_path = f'data/cache/bp_prune_model_{args.hidden_size}h_10c.npz'
         print(f"\n[4] BP training ({args.epochs} epochs, {len(train_imgs)} samples) ...")
@@ -1078,21 +1261,31 @@ def main():
         print(f"RESULTS - {mode}")
         print("=" * 70)
         print(f"  Architecture:        784 -> {args.hidden_size} -> 10")
-        print(f"  Mode:                surrogate-BP, rate input, score/count output")
-        print(f"  Pre score/count acc: {pre['score_acc']:.1f}% / {pre['count_acc']:.1f}%")
+        print("  Mode:                event-hidden BP, non-spiking score readout")
+        print(f"  Pre score/readout:   {pre['score_acc']:.1f}% / {pre['count_acc']:.1f}%")
         print(f"  Final score acc:     {final['score_acc']:.1f}%")
-        print(f"  Final count acc:     {final['count_acc']:.1f}%")
+        print(f"  Final readout acc:   {final['count_acc']:.1f}%")
 
-        print("\n  Per-class score/count accuracy:")
+        if args.enable_alt_mapping_prune:
+            int8_ref = trainer.test_int8_reference(test_imgs, test_lbls)
+            print("\n  INT8 deployment software reference:")
+            print(f"    Accuracy:             {int8_ref['accuracy']:.1f}%")
+            print(f"    Hidden spikes/sample: {int8_ref['hidden_spikes_per_sample']:.3f}")
+            print(f"    Active readouts/sample:{int8_ref['active_readouts_per_sample']:.3f}")
+            print(f"    INT8 scale/threshold: {int8_ref['weight_scale']:.3f}"
+                  f"/{int8_ref['hardware_threshold']}")
+            print(f"    Matching mapping:     {trainer.matching_mapping}")
+
+        print("\n  Per-class score/readout accuracy:")
         for c in range(10):
             ct = int(final['per_class_t'][c].item())
             sc = int(final['per_class_score_c'][c].item())
             cc = int(final['per_class_count_c'][c].item())
             print(f"    Class {c}: score {sc}/{ct}={sc/max(ct,1)*100:.0f}%  "
-                  f"count {cc}/{ct}={cc/max(ct,1)*100:.0f}%")
+                  f"readout {cc}/{ct}={cc/max(ct,1)*100:.0f}%")
 
         print("\n  Note: this BP model is a training framework for 784->1000->10.")
-        print("  Deployment still needs a matching FPGA mapping/export path.")
+        print("  Convert with tests/prepare_bp_coregroup_deployment.py before deployment.")
         return final['score_acc']
 
     # Original faithful STDP route, kept as a baseline.
@@ -1101,6 +1294,7 @@ def main():
     trainer = FaithfulOnChipTrainer(
         n_input=784, n_classes=10, features_per_class=args.neurons,
         leak=args.leak, timesteps=args.timesteps,
+        input_threshold=args.input_threshold,
         lr_plus=0.005, lr_minus=0.003, device=DEVICE)
     trainer.init_prototypes(train_imgs, train_lbls)
 

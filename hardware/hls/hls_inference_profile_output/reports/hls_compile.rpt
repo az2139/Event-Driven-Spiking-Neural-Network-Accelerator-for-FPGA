@@ -4,7 +4,7 @@
 == Synthesis Summary Report of 'snn_inference_profile_hls'
 ================================================================
 + General Information: 
-    * Date:           Fri Jun  5 18:55:21 2026
+    * Date:           Thu Jul  2 01:03:10 2026
     * Version:        2025.2 (Build 6295257 on Nov 14 2025)
     * Project:        hls_inference_profile_output
     * Solution:       hls (Vivado IP Flow Target)

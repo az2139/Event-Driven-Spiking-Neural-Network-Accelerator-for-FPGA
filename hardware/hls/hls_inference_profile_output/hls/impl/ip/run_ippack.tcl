@@ -6,8 +6,8 @@
 # 
 # ==============================================================
 source -notrace "/xilinx/2025.2/Vitis/common/scripts/ipxhls.tcl"
-set ip_out_dir "/home/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/hls/impl/ip"
-set data_file "/home/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/hls/hls_data.json"
+set ip_out_dir "/home/ym/XilinxProj/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/hls/impl/ip"
+set data_file "/home/ym/XilinxProj/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/hls/hls_data.json"
 set src_dir [file dir $data_file]
 set ip_types {vitis sysgen}
 set ippack_opts_dict {}

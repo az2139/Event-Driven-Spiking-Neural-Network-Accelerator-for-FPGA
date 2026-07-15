@@ -1,6 +1,6 @@
 <ENTRY>
 {
- "thisFile": "/home/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/hls_inference_profile_output.hlscompile_summary",
+ "thisFile": "/home/ym/XilinxProj/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/hls_inference_profile_output.hlscompile_summary",
  "connectId": "",
  "serverToken": "",
  "timestamp": "0"
@@ -9,12 +9,12 @@
 <ENTRY>
 {
  "type": "ET_CmdStep",
- "dateTimestamp": "Fri Jun  5 18:54:57 2026",
- "timestampMillis": "1780656897944",
+ "dateTimestamp": "Thu Jul  2 01:02:48 2026",
+ "timestampMillis": "1782925368747",
  "buildStep": {
-  "cmdId": "b625c231-6d6d-4594-be54-0da60f99ad1f",
+  "cmdId": "c396257e-8471-4f6a-a0c3-232ab6eaab53",
   "name": "v++",
-  "logFile": "/home/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/logs/hls_inference_profile_output.steps.log",
+  "logFile": "/home/ym/XilinxProj/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/logs/hls_inference_profile_output.steps.log",
   "commandLine": "/xilinx/2025.2/Vitis/bin/unwrapped/lnx64.o/v++  -c --mode hls --part xc7z020clg400-2 --config scripts/snn_inference_profile_hls_vpp.cfg --work_dir hls_inference_profile_output ",
   "args": [
    "-c",
@@ -29,21 +29,21 @@
   ],
   "iniFiles": [
    {
-    "path": "/home/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/scripts/snn_inference_profile_hls_vpp.cfg",
+    "path": "/home/ym/XilinxProj/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/scripts/snn_inference_profile_hls_vpp.cfg",
     "content": "# v++ HLS configuration for the lightweight hierarchical inference/profile IP.\n\n[hls]\nsyn.top=snn_inference_profile_hls\nclock=10ns\nsyn.file=src/snn_inference_profile_hls.cpp\nsyn.file_cflags=src/snn_inference_profile_hls.cpp,-Iinclude,-I../../config/generated,-std=gnu++14\nflow_target=vivado\npart=xc7z020clg400-2\npackage.output.format=ip_catalog\npackage.output.syn=true\n"
    }
   ],
-  "cwd": "/home/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls"
+  "cwd": "/home/ym/XilinxProj/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls"
  }
 }
 </ENTRY>
 <ENTRY>
 {
  "type": "ET_Status",
- "dateTimestamp": "Fri Jun  5 18:54:57 2026",
- "timestampMillis": "1780656897944",
+ "dateTimestamp": "Thu Jul  2 01:02:48 2026",
+ "timestampMillis": "1782925368748",
  "status": {
-  "cmdId": "b625c231-6d6d-4594-be54-0da60f99ad1f",
+  "cmdId": "c396257e-8471-4f6a-a0c3-232ab6eaab53",
   "state": "CS_RUNNING"
  }
 }
@@ -51,8 +51,8 @@
 <ENTRY>
 {
  "type": "ET_FlowMetaData",
- "dateTimestamp": "Fri Jun  5 18:55:02 2026",
- "timestampMillis": "1780656902329",
+ "dateTimestamp": "Thu Jul  2 01:02:52 2026",
+ "timestampMillis": "1782925372434",
  "buildSummary": {
   "hardwarePlatform": "",
   "hardwareDsa": "",
@@ -66,12 +66,12 @@
     "base": {
      "type": "KERNEL",
      "name": "snn_inference_profile_hls",
-     "file": "/home/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/snn_inference_profile_hls.zip",
+     "file": "/home/ym/XilinxProj/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/snn_inference_profile_hls.zip",
      "reports": [],
      "uuid": ""
     },
     "sources": [
-     "/home/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/src/snn_inference_profile_hls.cpp"
+     "/home/ym/XilinxProj/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/src/snn_inference_profile_hls.cpp"
     ],
     "psSources": [],
     "cuNames": [],
@@ -87,26 +87,26 @@
 <ENTRY>
 {
  "type": "ET_SubCmdStep",
- "dateTimestamp": "Fri Jun  5 18:55:02 2026",
- "timestampMillis": "1780656902330",
+ "dateTimestamp": "Thu Jul  2 01:02:52 2026",
+ "timestampMillis": "1782925372435",
  "buildStep": {
-  "cmdId": "0327d1b7-936c-4680-b140-8d3a157330c6",
+  "cmdId": "c826db9a-4c25-4479-8f9e-4252fc6f75ff",
   "name": "",
-  "logFile": "/home/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/hls/hls.log",
+  "logFile": "/home/ym/XilinxProj/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/hls/hls.log",
   "commandLine": "",
   "args": [],
   "iniFiles": [],
-  "cwd": "/home/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls"
+  "cwd": "/home/ym/XilinxProj/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls"
  }
 }
 </ENTRY>
 <ENTRY>
 {
  "type": "ET_Status",
- "dateTimestamp": "Fri Jun  5 18:55:02 2026",
- "timestampMillis": "1780656902331",
+ "dateTimestamp": "Thu Jul  2 01:02:52 2026",
+ "timestampMillis": "1782925372436",
  "status": {
-  "cmdId": "0327d1b7-936c-4680-b140-8d3a157330c6",
+  "cmdId": "c826db9a-4c25-4479-8f9e-4252fc6f75ff",
   "state": "CS_RUNNING"
  }
 }
@@ -114,10 +114,10 @@
 <ENTRY>
 {
  "type": "ET_Report",
- "dateTimestamp": "Fri Jun  5 18:55:02 2026",
- "timestampMillis": "1780656902331",
+ "dateTimestamp": "Thu Jul  2 01:02:52 2026",
+ "timestampMillis": "1782925372436",
  "report": {
-  "path": "/home/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/hls/hls_data.json",
+  "path": "/home/ym/XilinxProj/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/hls/hls_data.json",
   "name": "",
   "fileType": "JSON",
   "reportType": "HLS_SYNTHESIS",
@@ -128,10 +128,10 @@
 <ENTRY>
 {
  "type": "ET_Report",
- "dateTimestamp": "Fri Jun  5 18:55:02 2026",
- "timestampMillis": "1780656902331",
+ "dateTimestamp": "Thu Jul  2 01:02:52 2026",
+ "timestampMillis": "1782925372436",
  "report": {
-  "path": "/home/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/hls/syn/report/csynth.rpt",
+  "path": "/home/ym/XilinxProj/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/hls/syn/report/csynth.rpt",
   "name": "",
   "fileType": "TEXT",
   "reportType": "HLS_SYNTHESIS",
@@ -142,10 +142,10 @@
 <ENTRY>
 {
  "type": "ET_Report",
- "dateTimestamp": "Fri Jun  5 18:55:02 2026",
- "timestampMillis": "1780656902332",
+ "dateTimestamp": "Thu Jul  2 01:02:52 2026",
+ "timestampMillis": "1782925372437",
  "report": {
-  "path": "/home/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/hls/syn/report/csynth.xml",
+  "path": "/home/ym/XilinxProj/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/hls/syn/report/csynth.xml",
   "name": "",
   "fileType": "XML",
   "reportType": "HLS_SYNTHESIS",
@@ -156,10 +156,10 @@
 <ENTRY>
 {
  "type": "ET_Report",
- "dateTimestamp": "Fri Jun  5 18:55:22 2026",
- "timestampMillis": "1780656922593",
+ "dateTimestamp": "Thu Jul  2 01:03:11 2026",
+ "timestampMillis": "1782925391526",
  "report": {
-  "path": "/home/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/hls",
+  "path": "/home/ym/XilinxProj/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/hls",
   "name": "",
   "fileType": "DIR",
   "reportType": "HLS_DATAFLOW",
@@ -170,10 +170,10 @@
 <ENTRY>
 {
  "type": "ET_Report",
- "dateTimestamp": "Fri Jun  5 18:55:22 2026",
- "timestampMillis": "1780656922594",
+ "dateTimestamp": "Thu Jul  2 01:03:11 2026",
+ "timestampMillis": "1782925391527",
  "report": {
-  "path": "/home/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/hls",
+  "path": "/home/ym/XilinxProj/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/hls",
   "name": "",
   "fileType": "DIR",
   "reportType": "HLS_FUNCTION_CALL_GRAPH",
@@ -184,10 +184,10 @@
 <ENTRY>
 {
  "type": "ET_Report",
- "dateTimestamp": "Fri Jun  5 18:55:22 2026",
- "timestampMillis": "1780656922594",
+ "dateTimestamp": "Thu Jul  2 01:03:11 2026",
+ "timestampMillis": "1782925391527",
  "report": {
-  "path": "/home/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/hls",
+  "path": "/home/ym/XilinxProj/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/hls",
   "name": "",
   "fileType": "DIR",
   "reportType": "HLS_SCHEDULE",
@@ -198,10 +198,10 @@
 <ENTRY>
 {
  "type": "ET_Status",
- "dateTimestamp": "Fri Jun  5 18:55:22 2026",
- "timestampMillis": "1780656922595",
+ "dateTimestamp": "Thu Jul  2 01:03:11 2026",
+ "timestampMillis": "1782925391528",
  "status": {
-  "cmdId": "0327d1b7-936c-4680-b140-8d3a157330c6",
+  "cmdId": "c826db9a-4c25-4479-8f9e-4252fc6f75ff",
   "state": "CS_PASSED"
  }
 }
@@ -209,10 +209,10 @@
 <ENTRY>
 {
  "type": "ET_Status",
- "dateTimestamp": "Fri Jun  5 18:55:31 2026",
- "timestampMillis": "1780656931438",
+ "dateTimestamp": "Thu Jul  2 01:03:19 2026",
+ "timestampMillis": "1782925399473",
  "status": {
-  "cmdId": "b625c231-6d6d-4594-be54-0da60f99ad1f",
+  "cmdId": "c396257e-8471-4f6a-a0c3-232ab6eaab53",
   "state": "CS_PASSED"
  }
 }
@@ -220,10 +220,10 @@
 <ENTRY>
 {
  "type": "ET_Report",
- "dateTimestamp": "Fri Jun  5 18:55:31 2026",
- "timestampMillis": "1780656931488",
+ "dateTimestamp": "Thu Jul  2 01:03:19 2026",
+ "timestampMillis": "1782925399514",
  "report": {
-  "path": "/home/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/reports/v++_compile_hls_inference_profile_output_guidance.html",
+  "path": "/home/ym/XilinxProj/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/reports/v++_compile_hls_inference_profile_output_guidance.html",
   "name": "",
   "fileType": "HTML",
   "reportType": "GLOBAL_RULECHECK_GUIDANCE",
@@ -234,10 +234,10 @@
 <ENTRY>
 {
  "type": "ET_Report",
- "dateTimestamp": "Fri Jun  5 18:55:31 2026",
- "timestampMillis": "1780656931489",
+ "dateTimestamp": "Thu Jul  2 01:03:19 2026",
+ "timestampMillis": "1782925399515",
  "report": {
-  "path": "/home/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/reports/.db/v++_compile_hls_inference_profile_output_guidance.pb3",
+  "path": "/home/ym/XilinxProj/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls/hls_inference_profile_output/reports/.db/v++_compile_hls_inference_profile_output_guidance.pb3",
   "name": "",
   "fileType": "BINARY_PROTOBUF",
   "reportType": "GLOBAL_RULECHECK_GUIDANCE",

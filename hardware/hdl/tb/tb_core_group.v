@@ -32,6 +32,12 @@ module tb_core_group;
     wire [31:0] spike_count;
     wire group_busy;
     wire [8*32-1:0] profile_snapshot;
+    reg sample_clear;
+    wire sample_clear_done;
+    reg score_cfg_we, score_cfg_valid;
+    reg [3:0] score_cfg_class;
+    reg [LOCAL_ID_WIDTH-1:0] score_cfg_local_id;
+    wire [10*32-1:0] score_live_snapshot;
 
     core_group #(
         .GROUP_ID(0), .NEURONS_PER_GROUP(NEURONS_PER_GROUP),
@@ -53,6 +59,10 @@ module tb_core_group;
         .weight_exc(weight_exc),
         .spike_count(spike_count), .group_busy(group_busy),
         .profile_active(1'b0), .profile_start(1'b0), .profile_stop(1'b0),
+        .sample_clear(sample_clear), .sample_clear_done(sample_clear_done),
+        .score_cfg_we(score_cfg_we), .score_cfg_class(score_cfg_class),
+        .score_cfg_local_id(score_cfg_local_id), .score_cfg_valid(score_cfg_valid),
+        .score_live_snapshot(score_live_snapshot),
         .profile_snapshot(profile_snapshot)
     );
 
@@ -135,6 +145,9 @@ module tb_core_group;
     begin
         rst_n <= 0; enable <= 0;
         ext_spike_valid <= 0; out_spike_ready <= 1;
+        sample_clear <= 0;
+        score_cfg_we <= 0; score_cfg_valid <= 0;
+        score_cfg_class <= 0; score_cfg_local_id <= 0;
         global_threshold <= 16'd10; global_leak_rate <= 8'd0;
         global_refrac_period <= 8'd5;
         weight_we <= 0; weight_src_id <= 0; weight_dst_id <= 0;
@@ -319,6 +332,61 @@ module tb_core_group;
             wait_done;
             check(15, "After leak decay sub-threshold stays sub-thresh", spike_count == sc);
             global_leak_rate <= 8'd0;
+        end
+
+        // TEST 16: Per-sample neuron-state clear
+        $display("\n--- Test 16: Sample State Clear ---");
+        begin : t16
+            reg [15:0] sc;
+            global_leak_rate <= 8'd0;
+            global_refrac_period <= 8'd0;
+            sc = spike_count;
+            inject_spike(7'd121, 8'd6, 1'b1);
+            wait_done;
+            @(posedge clk);
+            sample_clear <= 1'b1;
+            @(posedge clk);
+            sample_clear <= 1'b0;
+            wait (!sample_clear_done);
+            wait (sample_clear_done);
+            wait_done;
+            inject_spike(7'd121, 8'd6, 1'b1);
+            wait_done;
+            check(16, "Clear removes residual membrane", spike_count == sc);
+            inject_spike(7'd121, 8'd4, 1'b1);
+            wait_spikes(sc + 1);
+            check(17, "Post-clear accumulation restarts at zero", spike_count == sc + 1);
+        end
+
+        // TEST 18: Fire-once bitmap
+        $display("\n--- Test 18: Per-Sample Fire Once ---");
+        begin : t18
+            reg [15:0] sc;
+            sc = spike_count;
+            inject_spike(7'd123, 8'd10, 1'b1);
+            wait_spikes(sc + 1);
+            inject_spike(7'd123, 8'd10, 1'b1);
+            wait_done;
+            check(18, "Neuron fires at most once per sample", spike_count == sc + 1);
+        end
+
+        // TEST 19: Non-spiking signed score accumulator
+        $display("\n--- Test 19: BP Score Readout ---");
+        begin : t19
+            reg [15:0] sc;
+            sc = spike_count;
+            score_cfg_class <= 4'd3;
+            score_cfg_local_id <= 7'd122;
+            score_cfg_valid <= 1'b1;
+            score_cfg_we <= 1'b1;
+            @(posedge clk);
+            score_cfg_we <= 1'b0;
+            inject_spike(7'd122, 8'd20, 1'b1);
+            wait_done;
+            inject_spike(7'd122, 8'd7, 1'b0);
+            wait_done;
+            check(19, "Score accumulates signed events", $signed(score_live_snapshot[3*32 +: 32]) == 13);
+            check(20, "Score node bypasses LIF firing", spike_count == sc);
         end
 
         $display("\n=========================================================");

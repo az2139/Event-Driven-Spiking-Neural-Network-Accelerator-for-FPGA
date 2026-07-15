@@ -257,6 +257,7 @@ module snn_core_group_top #(
     wire [NUM_GROUPS*WEIGHT_WIDTH-1:0]          grp_in_weight;
     wire [NUM_GROUPS-1:0]                       grp_in_exc;
     wire [NUM_GROUPS-1:0]                       grp_in_ready;
+    wire [NUM_GROUPS-1:0]                       grp_sample_clear_done;
 
     // Weight config from event router → core groups
     wire [NUM_GROUPS-1:0]                       grp_weight_we;
@@ -269,6 +270,7 @@ module snn_core_group_top #(
     wire [NUM_GROUPS*32-1:0]                    grp_spike_count;
     wire [NUM_GROUPS-1:0]                       grp_busy;
     wire [NUM_GROUPS*8*32-1:0]                  grp_profile_snapshot;
+    wire [NUM_GROUPS*10*32-1:0]                 grp_score_live;
 
     //=========================================================================
     // Internal Wiring: Event Router <-> Connectivity Table
@@ -383,9 +385,18 @@ module snn_core_group_top #(
         input [GROUP_ID_WIDTH-1:0] group_id;
         input [LOCAL_ID_WIDTH-1:0] local_id;
         integer logical_id;
+        reg [LOCAL_ID_WIDTH:0] local_plus_group;
         begin
-            logical_id = local_id * NUM_GROUPS + group_id;
-            classifier_class_id = logical_id / FPS_PER_CLASS;
+            if (NUM_GROUPS == 16 && FPS_PER_CLASS == 15) begin
+                // floor((16*local+group)/15) = local + floor((local+group)/15).
+                // Classifier IDs are below 150, so floor((local+group)/15) is 0 or 1.
+                local_plus_group = local_id + group_id;
+                classifier_class_id = local_id[3:0] +
+                    ((local_plus_group >= 15) ? 4'd1 : 4'd0);
+            end else begin
+                logical_id = local_id * NUM_GROUPS + group_id;
+                classifier_class_id = logical_id / FPS_PER_CLASS;
+            end
         end
     endfunction
 
@@ -470,11 +481,13 @@ module snn_core_group_top #(
     localparam PROFILE_TOTAL_COUNT         = PROFILE_BASIC_ONLY ? PROFILE_BASIC_COUNT : PROFILE_FULL_COUNT;
     localparam [7:0] PROFILE_NUM_GROUPS_INFO = NUM_GROUPS;
     localparam [15:0] PROFILE_TOTAL_COUNT_INFO = PROFILE_TOTAL_COUNT;
-    localparam [7:0] PROFILE_VERSION_INFO = PROFILE_BASIC_ONLY ? 8'h0C : 8'h09;
+    localparam [7:0] PROFILE_VERSION_INFO = PROFILE_BASIC_ONLY ? 8'h0D : 8'h09;
 
     reg        profile_active;
     reg        profile_done;
+    reg        bp_score_mode;
     reg        profile_stop_local;
+    reg        sample_clear_pending;
     reg [31:0] total_latency_live;
     reg [31:0] total_latency_snapshot;
     reg [31:0] first_spike_latency_live;
@@ -504,6 +517,20 @@ module snn_core_group_top #(
     reg [31:0] classifier_class_score_snapshot [0:NUM_CLASSES-1];
     reg [31:0] classifier_class_event_live [0:NUM_CLASSES-1];
     reg [31:0] classifier_class_event_snapshot [0:NUM_CLASSES-1];
+    reg signed [31:0] bp_score_aggregate [0:NUM_CLASSES-1];
+    reg [GROUP_ID_WIDTH-1:0] bp_score_group_for_class [0:NUM_CLASSES-1];
+    integer bp_score_gi;
+    integer bp_score_ci;
+
+    always @(*) begin
+        for (bp_score_ci = 0; bp_score_ci < NUM_CLASSES; bp_score_ci = bp_score_ci + 1) begin
+            bp_score_aggregate[bp_score_ci] = 32'sd0;
+            for (bp_score_gi = 0; bp_score_gi < NUM_GROUPS; bp_score_gi = bp_score_gi + 1)
+                if (bp_score_group_for_class[bp_score_ci] == bp_score_gi)
+                    bp_score_aggregate[bp_score_ci] =
+                        $signed(grp_score_live[(bp_score_gi*NUM_CLASSES+bp_score_ci)*32 +: 32]);
+        end
+    end
     reg [31:0] input_source_group_count_live [0:NUM_GROUPS-1];
     reg [31:0] input_source_group_count_snapshot [0:NUM_GROUPS-1];
     reg [PROFILE_INPUT_SOURCE_BITMAP_BITS-1:0] input_source_bitmap_live;
@@ -531,6 +558,7 @@ module snn_core_group_top #(
     reg        profile_fanout_input_source_valid_d;
     reg [PROFILE_INPUT_SOURCE_PIXEL_WIDTH-1:0] profile_fanout_input_source_pixel_d;
     reg [31:0] basic_drop_spike_sum;
+    reg [31:0] basic_drop_spike_snapshot;
     integer profile_sel;
     integer class_count_i;
     integer class_count_gi;
@@ -544,6 +572,16 @@ module snn_core_group_top #(
                 basic_drop_spike_sum +
                 grp_profile_snapshot[(basic_profile_gi*PROFILE_CORE_METRIC_COUNT + 5)*32 +: 32];
         end
+    end
+
+    // Register the cross-group reduction before the AXI profile read mux.
+    // Core snapshots update at profile_stop; the host reads only after the
+    // subsequent state-clear interval, so this pipeline stage is settled.
+    always @(posedge clk_100mhz) begin
+        if (!rst_n_sync)
+            basic_drop_spike_snapshot <= 32'd0;
+        else
+            basic_drop_spike_snapshot <= basic_drop_spike_sum;
     end
 
     always @(*) begin
@@ -683,6 +721,7 @@ module snn_core_group_top #(
             profile_active          <= 1'b0;
             profile_done            <= 1'b0;
             profile_stop_local      <= 1'b0;
+            sample_clear_pending    <= 1'b0;
             total_latency_live      <= 32'd0;
             total_latency_snapshot  <= 32'd0;
             first_spike_latency_live     <= 32'd0;
@@ -735,10 +774,13 @@ module snn_core_group_top #(
             profile_fanout_input_source_pixel_d <= {PROFILE_INPUT_SOURCE_PIXEL_WIDTH{1'b0}};
         end else begin
             profile_stop_local <= cfg_profile_stop;
+            if (cfg_profile_stop)
+                profile_done <= 1'b0;
             if (cfg_profile_start) begin
                 profile_active               <= 1'b1;
                 profile_done                 <= 1'b0;
                 profile_stop_local           <= 1'b0;
+                sample_clear_pending         <= 1'b0;
                 total_latency_live           <= 32'd0;
                 first_spike_latency_live     <= 32'd0;
                 first_spike_latency_snapshot <= 32'd0;
@@ -901,7 +943,8 @@ module snn_core_group_top #(
             end
             if (profile_stop_local) begin
                 profile_active         <= 1'b0;
-                profile_done           <= 1'b1;
+                profile_done           <= 1'b0;
+                sample_clear_pending   <= 1'b1;
                 total_latency_snapshot <= total_latency_live;
                 if (!sample_service_done)
                     service_cycles_snapshot <= service_cycles_live;
@@ -915,7 +958,9 @@ module snn_core_group_top #(
                     for (class_count_i = 0; class_count_i < NUM_CLASSES; class_count_i = class_count_i + 1)
                         classifier_class_count_snapshot[class_count_i] <= classifier_class_count_live[class_count_i];
                     for (class_count_i = 0; class_count_i < NUM_CLASSES; class_count_i = class_count_i + 1) begin
-                        classifier_class_score_snapshot[class_count_i] <= classifier_class_score_live[class_count_i];
+                        classifier_class_score_snapshot[class_count_i] <= bp_score_mode ?
+                            bp_score_aggregate[class_count_i] :
+                            classifier_class_score_live[class_count_i];
                         classifier_class_event_snapshot[class_count_i] <= classifier_class_event_live[class_count_i];
                     end
                 end
@@ -926,6 +971,10 @@ module snn_core_group_top #(
                 end
                 if (ENABLE_PROFILE_DETAIL)
                     input_source_ct_bitmap_snapshot <= input_source_ct_bitmap_live;
+            end
+            if (sample_clear_pending && (&grp_sample_clear_done)) begin
+                sample_clear_pending <= 1'b0;
+                profile_done         <= 1'b1;
             end
         end
     end
@@ -942,7 +991,7 @@ module snn_core_group_top #(
                 4: cfg_profile_data = router_profile_snapshot[7*32 +: 32]; // router_stall_cycles
                 5: cfg_profile_data = router_profile_snapshot[8*32 +: 32]; // cross_group_event_count
                 6: cfg_profile_data = router_profile_snapshot[9*32 +: 32]; // same_group_event_count
-                7: cfg_profile_data = basic_drop_spike_sum;
+                7: cfg_profile_data = basic_drop_spike_snapshot;
                 8: cfg_profile_data = service_dbg_input_done_cycle_snapshot;
                 9: cfg_profile_data = service_dbg_hls_pending_clear_cycle_snapshot;
                 default: cfg_profile_data = 32'd0;
@@ -1023,13 +1072,28 @@ module snn_core_group_top #(
     reg                          intra_weight_exc_reg;
     reg [FANOUT_IDX_WIDTH-1:0]   intra_weight_fanout_idx_reg;
 
+    // BP score readout configuration: cmd=0x2, one mapped output ID per class.
+    reg [NUM_GROUPS-1:0]         score_cfg_we_reg;
+    reg [3:0]                    score_cfg_class_reg;
+    reg [LOCAL_ID_WIDTH-1:0]     score_cfg_local_id_reg;
+    reg                          score_cfg_valid_reg;
+    integer                      score_cfg_i;
+
     always @(posedge clk_100mhz) begin
         if (!rst_n_sync) begin
             ct_cfg_we_reg       <= 0;
             intra_weight_we_reg <= {NUM_GROUPS{1'b0}};
+            score_cfg_we_reg    <= {NUM_GROUPS{1'b0}};
+            score_cfg_class_reg <= 4'd0;
+            score_cfg_local_id_reg <= {LOCAL_ID_WIDTH{1'b0}};
+            score_cfg_valid_reg <= 1'b0;
+            bp_score_mode       <= 1'b0;
+            for (score_cfg_i = 0; score_cfg_i < NUM_CLASSES; score_cfg_i = score_cfg_i + 1)
+                bp_score_group_for_class[score_cfg_i] <= {GROUP_ID_WIDTH{1'b0}};
         end else begin
             ct_cfg_we_reg       <= 0;
             intra_weight_we_reg <= {NUM_GROUPS{1'b0}};
+            score_cfg_we_reg    <= {NUM_GROUPS{1'b0}};
 
             if (cfg_router_config_we) begin
                 case (cfg_cmd)
@@ -1054,6 +1118,18 @@ module snn_core_group_top #(
                         intra_weight_exc_reg  <= cfg_router_config_wdata[9];
                         intra_weight_fanout_idx_reg <= cfg_router_config_wdata[3:0];
                         intra_weight_we_reg[cfg_router_config_wdata[8:5]] <= 1'b1;
+                    end
+                    4'h2: begin
+                        score_cfg_valid_reg <= cfg_router_config_wdata[31];
+                        score_cfg_class_reg <= cfg_router_config_wdata[27:24];
+                        score_cfg_local_id_reg <= cfg_router_config_wdata[LOCAL_ID_WIDTH-1:0];
+                        score_cfg_we_reg[
+                            cfg_router_config_wdata[LOCAL_ID_WIDTH +: GROUP_ID_WIDTH]
+                        ] <= 1'b1;
+                        if (cfg_router_config_wdata[27:24] < NUM_CLASSES)
+                            bp_score_group_for_class[cfg_router_config_wdata[27:24]] <=
+                                cfg_router_config_wdata[LOCAL_ID_WIDTH +: GROUP_ID_WIDTH];
+                        bp_score_mode <= 1'b1;
                     end
                     default: ;
                 endcase
@@ -1276,8 +1352,13 @@ module snn_core_group_top #(
 
     assign learn_spike_ready       = first_spike_tap_valid ? 1'b0 : hls_spike_in_ready;
 
-    assign rtl_snn_ready      = !router_busy & (grp_busy == {NUM_GROUPS{1'b0}});
-    assign rtl_snn_busy       = router_busy | (grp_busy != {NUM_GROUPS{1'b0}});
+    // A sample is drained only after the HLS-to-router staging FIFO is empty as
+    // well as the router and every core group. Omitting hls_ext_pending lets a
+    // tail event from the previous image arrive after its state-clear sweep.
+    assign rtl_snn_ready      = !hls_ext_pending && !router_busy &&
+                                (grp_busy == {NUM_GROUPS{1'b0}});
+    assign rtl_snn_busy       = hls_ext_pending || router_busy ||
+                                (grp_busy != {NUM_GROUPS{1'b0}});
 
     //=========================================================================
     // Core Group Instantiations
@@ -1389,6 +1470,13 @@ module snn_core_group_top #(
                 .profile_active     (profile_active),
                 .profile_start      (cfg_profile_start),
                 .profile_stop       (profile_stop_local),
+                .sample_clear       (profile_stop_local),
+                .sample_clear_done  (grp_sample_clear_done[g]),
+                .score_cfg_we       (score_cfg_we_reg[g]),
+                .score_cfg_class    (score_cfg_class_reg),
+                .score_cfg_local_id (score_cfg_local_id_reg),
+                .score_cfg_valid    (score_cfg_valid_reg),
+                .score_live_snapshot(grp_score_live[g*NUM_CLASSES*32 +: NUM_CLASSES*32]),
                 .profile_snapshot   (grp_profile_snapshot[g*PROFILE_CORE_METRIC_COUNT*32 +: PROFILE_CORE_METRIC_COUNT*32])
             );
         end

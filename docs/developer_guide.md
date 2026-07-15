@@ -118,6 +118,68 @@ The core-group build writes `outputs/snn_core_group_profile.bit` and
 `core_group`, and `synaptic_connectivity_table` are present and that the legacy
 `spike_router` is absent.
 
+### Convert a pruned BP model for the core-group RTL
+
+After alternating BP pruning and mapping, convert the saved model and a matching
+mapping snapshot into the hardware deployment package:
+
+```bash
+python3 tests/prepare_bp_coregroup_deployment.py \
+  --model data/cache/bp_prune_model_1000h_10c.npz \
+  --mapping data/cache/bp_coregroup_mapping_best.npz \
+  --output data/cache/bp_coregroup_deployment.npz
+```
+
+With alternating mapping/pruning enabled, training writes the restored best
+deployable checkpoint and its exact matching ``*_best.npz`` mapping together.
+It also prints a full-test-set INT8 software reference after training.
+
+The output contains the logical-to-hardware neuron IDs, quantized signed-edge
+magnitudes, input/hidden/output ID ranges, and ordered `cfg_addr`/`cfg_wdata`
+writes for the local sparse fanout tables and inter-group connectivity table.
+The adjacent JSON file records dimensions, fanout use, and quantization values.
+
+The current RTL has one global threshold and an 8-bit unsigned weight magnitude
+plus an excitatory/inhibitory bit. The converter therefore rejects unequal
+hidden/output thresholds and fanout overflow. New pruning runs default to zero
+software leak, one input presentation, and deterministic `pixel > 0.3` encoding
+to match the current deployment configuration. A nonzero leak saved by an older
+model is still reported because the trainer's subtractive leak is not bit-exact
+with the RTL's shift-based leak.
+
+At the end of each profiled image, the board waits for DMA/HLS input completion,
+an idle router, and idle core groups before issuing `PROFILE_STOP`. This command
+also starts a parallel 128-entry state-memory clear in every core group. The RTL
+delays `profile_done` until all membrane-potential and refractory entries are
+zero, so the next image cannot inherit neuron state from the preceding image.
+Weights, local fanout tables, the inter-group connectivity table, and cumulative
+hardware counters are preserved.
+
+The standard core-group entry point auto-detects the mapped two-layer BP package:
+
+The event-aware BP route requires a freshly trained model, deployment format v2,
+and a rebuilt core-group bitstream exposing profile version 13. The RTL configures
+the ten mapped output IDs as non-spiking signed score accumulators, snapshots all
+ten scores at sample stop, and exposes them through the profile window. The host
+computes argmax from those ten signed integer scores. Older model/deployment/
+bitstream combinations are rejected.
+
+```bash
+python3 tests/fpga_10class_coregroup_inference.py \
+  --data /home/xilinx/snn \
+  --weights /home/xilinx/snn/bp_coregroup_deployment.npz \
+  --dataset /home/xilinx/snn/mnist_10class_deployment_100n.npz \
+  --n 100
+```
+
+This path programs the pre-encoded local-fanout and CT writes, injects events
+through the deployment's 784 mapped input IDs, and classifies only spikes from
+its ten mapped output IDs. It reports two software references: an INT8
+layer-synchronous `T=1` forward pass and an event-serial hardware-semantics
+model. Use `--allow-repeat-fire-reference` only with an RTL build that does not
+enforce one spike per neuron per image. Models trained with the older stochastic
+25-step input path must be retrained and reconverted before this comparison.
+
 ## Supported Workflow Policy
 
 - Native library-first path is the maintained route.

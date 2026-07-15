@@ -827,6 +827,7 @@ def run_inference(hls: MMIO, cfg: MMIO, dma: MMIO,
                   profile_enabled: bool = False,
                   profile_num_groups: int = 0,
                   profile_drain_timeout_s: float = 0.100,
+                  sample_clear_on_stop: bool = False,
                   wait_hls_input_count: bool = False,
                   hls_input_timeout_s: float = 0.300) -> dict:
     """
@@ -1060,10 +1061,13 @@ def run_inference(hls: MMIO, cfg: MMIO, dma: MMIO,
     t_settle1 = time.perf_counter()
 
     # A profile snapshot is valid only after all input and RTL work has drained.
+    # In the core-group bitstream PROFILE_STOP also launches the parallel
+    # per-group neuron-state clear sweep. profile_done is delayed until every
+    # group commits its final BRAM clear write.
     profile_incomplete = False
     profile_status = 0
     profile_snapshot = {}
-    if profile_enabled:
+    if profile_enabled or sample_clear_on_stop:
         drain_deadline = time.monotonic() + max(0.0, profile_drain_timeout_s)
         while time.monotonic() < drain_deadline:
             mm2s_done = mm2s_done or mm2s_is_done(dma.read(DMA_MM2S_DMASR))
@@ -1077,7 +1081,21 @@ def run_inference(hls: MMIO, cfg: MMIO, dma: MMIO,
         else:
             profile_incomplete = True
 
+        # PROFILE_STOP is also the sample-clear command on the core-group RTL.
         cfg.write(CFG_PROFILE_CTRL, PROFILE_STOP)
+        clear_deadline = time.monotonic() + max(0.0, profile_drain_timeout_s)
+        while time.monotonic() < clear_deadline:
+            clear_status = cfg.read(CFG_STATUS)
+            clear_done = bool(clear_status & STATUS_PROFILE_DONE)
+            groups_idle = not bool(clear_status & STATUS_GROUP_BUSY)
+            snn_ready = bool(clear_status & STATUS_SNN_READY)
+            if clear_done and groups_idle and snn_ready:
+                break
+            tracked_sleep(settle_poll_sleep_s)
+        else:
+            profile_incomplete = True
+
+    if profile_enabled:
         profile_snapshot = read_profile_snapshot(cfg, profile_num_groups)
 
     # ── STEP 7: Stop HLS + DMA ────────────────────────────────────────

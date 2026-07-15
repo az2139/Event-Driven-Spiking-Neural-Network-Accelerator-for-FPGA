@@ -84,6 +84,13 @@ module core_group #(
     input  wire                         profile_active,
     input  wire                         profile_start,
     input  wire                         profile_stop,
+    input  wire                         sample_clear,
+    output reg                          sample_clear_done,
+    input  wire                         score_cfg_we,
+    input  wire [3:0]                   score_cfg_class,
+    input  wire [LOCAL_ID_WIDTH-1:0]    score_cfg_local_id,
+    input  wire                         score_cfg_valid,
+    output wire [10*32-1:0]             score_live_snapshot,
     output wire [8*32-1:0]              profile_snapshot
 );
 
@@ -249,8 +256,10 @@ module core_group #(
         ST_SPIKE_RD     = 4'd4,
         ST_SPIKE_CMP    = 4'd5,
         ST_SPIKE_WR     = 4'd6,
-        ST_INTRA_ROUTE  = 4'd7,   // Scan local weight matrix for fired neuron
-        ST_INTRA_READ   = 4'd8;   // Wait for weight memory read
+        ST_INTRA_ROUTE        = 4'd7,   // Scan local weight matrix for fired neuron
+        ST_INTRA_READ         = 4'd8,   // Wait for weight memory read
+        ST_SAMPLE_CLEAR       = 4'd9,   // Clear neuron state BRAM
+        ST_SAMPLE_CLEAR_FLUSH = 4'd10;  // Commit final synchronous BRAM write
 
     reg [3:0] state;
     reg [LOCAL_ID_WIDTH-1:0] leak_idx;
@@ -259,7 +268,22 @@ module core_group #(
     reg [LOCAL_ID_WIDTH-1:0] fired_neuron_id;
     reg [LOCAL_ID_WIDTH-1:0] intra_scan_idx;
     reg [LOCAL_ID_WIDTH-1:0] leak_addr_hold;
+    reg [LOCAL_ID_WIDTH-1:0] clear_idx;
     reg [31:0]               total_spikes;
+    reg [NEURONS_PER_GROUP-1:0] fired_this_sample;
+    reg signed [31:0]        output_score_live [0:9];
+    reg [LOCAL_ID_WIDTH-1:0] output_score_local_id [0:9];
+    reg                      output_score_valid [0:9];
+    reg                      sp_is_score;
+    reg [3:0]                sp_score_class;
+    integer                  score_i;
+
+    generate
+        genvar score_g;
+        for (score_g = 0; score_g < 10; score_g = score_g + 1) begin : gen_score_live
+            assign score_live_snapshot[score_g*32 +: 32] = output_score_live[score_g];
+        end
+    endgenerate
 
     // FIFO write signals (external or recurrent)
     reg                      fifo_push;
@@ -272,8 +296,10 @@ module core_group #(
                                (state == ST_SPIKE_CMP) ||
                                (state == ST_SPIKE_WR)  ||
                                intra_routing;
-    assign ext_spike_ready = !fifo_full && !intra_routing;
-    assign group_busy  = event_pipeline_busy || !fifo_empty || out_spike_valid || !out_fifo_empty;
+    wire sample_clearing = (state == ST_SAMPLE_CLEAR || state == ST_SAMPLE_CLEAR_FLUSH);
+    assign ext_spike_ready = !fifo_full && !intra_routing && !sample_clearing;
+    assign group_busy  = event_pipeline_busy || sample_clearing ||
+                         !fifo_empty || out_spike_valid || !out_fifo_empty;
     assign spike_count = total_spikes;
 
     //=========================================================================
@@ -354,7 +380,9 @@ module core_group #(
             fired_neuron_id <= 0;
             intra_scan_idx  <= 0;
             leak_addr_hold  <= 0;
+            clear_idx       <= 0;
             total_spikes    <= 0;
+            fired_this_sample <= {NEURONS_PER_GROUP{1'b0}};
             fifo_wr_ptr     <= 0;
             fifo_rd_ptr     <= 0;
             fifo_count      <= 0;
@@ -362,6 +390,14 @@ module core_group #(
             fifo_pop        <= 0;
             out_fifo_push   <= 0;
             out_fifo_push_data <= 0;
+            sample_clear_done <= 1'b1;
+            sp_is_score       <= 1'b0;
+            sp_score_class    <= 4'd0;
+            for (score_i = 0; score_i < 10; score_i = score_i + 1) begin
+                output_score_live[score_i] <= 32'sd0;
+                output_score_local_id[score_i] <= {LOCAL_ID_WIDTH{1'b0}};
+                output_score_valid[score_i] <= 1'b0;
+            end
         end else begin
             // Defaults
             ns_we          <= 0;
@@ -370,6 +406,16 @@ module core_group #(
             out_fifo_push  <= 0;
             wm_we          <= 0;
             intra_sparse_we <= 0;
+
+            if (score_cfg_we && score_cfg_class < 10) begin
+                output_score_local_id[score_cfg_class] <= score_cfg_local_id;
+                output_score_valid[score_cfg_class] <= score_cfg_valid;
+            end
+            if (profile_start) begin
+                fired_this_sample <= {NEURONS_PER_GROUP{1'b0}};
+                for (score_i = 0; score_i < 10; score_i = score_i + 1)
+                    output_score_live[score_i] <= 32'sd0;
+            end
 
             //--- External FIFO write (blocked during intra-group routing) ---
             if (ext_spike_valid && !fifo_full && !intra_routing) begin
@@ -403,7 +449,22 @@ module core_group #(
                 intra_sparse_mem[intra_sparse_wr_addr] <= intra_sparse_din;
             intra_sparse_dout <= intra_sparse_mem[intra_sparse_rd_addr];
 
-            if (enable || state != ST_IDLE) begin
+            if (sample_clear) begin
+                // The host requests this only after the event network drains.
+                // Preserve weights and connectivity; clear per-sample state.
+                state             <= ST_SAMPLE_CLEAR;
+                clear_idx         <= {LOCAL_ID_WIDTH{1'b0}};
+                sample_clear_done <= 1'b0;
+                leak_idx          <= {LOCAL_ID_WIDTH{1'b0}};
+                leak_cycle_done   <= 1'b0;
+                fifo_wr_ptr       <= {FIFO_IDX_WIDTH{1'b0}};
+                fifo_rd_ptr       <= {FIFO_IDX_WIDTH{1'b0}};
+                fifo_count        <= {(FIFO_IDX_WIDTH+1){1'b0}};
+                fifo_push         <= 1'b0;
+                fifo_pop          <= 1'b0;
+                sp_fired          <= 1'b0;
+                fired_this_sample <= {NEURONS_PER_GROUP{1'b0}};
+            end else if (enable || state != ST_IDLE) begin
                 case (state)
                     //------------------------------------------------------
                     ST_IDLE: begin
@@ -471,12 +532,22 @@ module core_group #(
                     // Spike pipeline: RD → CMP → WR → (optional INTRA_ROUTE)
                     //------------------------------------------------------
                     ST_SPIKE_RD: begin
+                        sp_is_score <= 1'b0;
+                        sp_score_class <= 4'd0;
+                        for (score_i = 0; score_i < 10; score_i = score_i + 1) begin
+                            if (output_score_valid[score_i] &&
+                                sp_addr == output_score_local_id[score_i]) begin
+                                sp_is_score <= 1'b1;
+                                sp_score_class <= score_i[3:0];
+                            end
+                        end
                         state <= ST_SPIKE_CMP;
                     end
 
                     ST_SPIKE_CMP: begin
                         sp_fired <= 0;
-                        if (ref_rd == 0 && sp_exc) begin
+                        if (!sp_is_score && !fired_this_sample[sp_addr] &&
+                            ref_rd == 0 && sp_exc) begin
                             if (~threshold_diff[DATA_WIDTH])
                                 sp_fired <= 1;
                         end
@@ -484,8 +555,17 @@ module core_group #(
                     end
 
                     ST_SPIKE_WR: begin
-                        ns_we      <= 1;
-                        ns_wr_addr <= sp_addr;
+                        if (sp_is_score) begin
+                            if (sp_exc)
+                                output_score_live[sp_score_class] <=
+                                    output_score_live[sp_score_class] + $signed({1'b0, sp_weight});
+                            else
+                                output_score_live[sp_score_class] <=
+                                    output_score_live[sp_score_class] - $signed({1'b0, sp_weight});
+                            state <= ST_IDLE;
+                        end else begin
+                            ns_we      <= 1;
+                            ns_wr_addr <= sp_addr;
 
                         if (ref_rd > 0) begin
                             ns_din <= ns_dout;  // Keep during refractory
@@ -494,6 +574,7 @@ module core_group #(
                             // Fired: reset membrane, set refractory, enqueue output in fire order
                             ns_din <= {{DATA_WIDTH{1'b0}}, global_refrac_period};
                             total_spikes   <= total_spikes + 1;
+                            fired_this_sample[sp_addr] <= 1'b1;
                             if (!out_fifo_full) begin
                                 out_fifo_push      <= 1'b1;
                                 out_fifo_push_data <= sp_addr;
@@ -529,6 +610,7 @@ module core_group #(
                                     ns_din <= {{DATA_WIDTH{1'b0}}, ref_rd};
                             end
                             state <= ST_IDLE;
+                        end
                         end
                     end
 
@@ -590,6 +672,23 @@ module core_group #(
                         end
                     end
 
+                    ST_SAMPLE_CLEAR: begin
+                        ns_we      <= 1'b1;
+                        ns_wr_addr <= clear_idx;
+                        ns_din     <= {STATE_WIDTH{1'b0}};
+                        if (clear_idx + 1 >= NEURONS_PER_GROUP) begin
+                            state <= ST_SAMPLE_CLEAR_FLUSH;
+                        end else begin
+                            clear_idx <= clear_idx + 1'b1;
+                        end
+                    end
+
+                    ST_SAMPLE_CLEAR_FLUSH: begin
+                        // The final state-memory write commits on this edge.
+                        sample_clear_done <= 1'b1;
+                        state <= ST_IDLE;
+                    end
+
                     default: state <= ST_IDLE;
                 endcase
 
@@ -599,11 +698,13 @@ module core_group #(
             end
 
             //--- FIFO count management ---
-            case ({fifo_push, fifo_pop})
-                2'b10: fifo_count <= fifo_count + 1;
-                2'b01: fifo_count <= fifo_count - 1;
-                default: fifo_count <= fifo_count;  // 00 or 11 (push+pop)
-            endcase
+            if (!sample_clear) begin
+                case ({fifo_push, fifo_pop})
+                    2'b10: fifo_count <= fifo_count + 1;
+                    2'b01: fifo_count <= fifo_count - 1;
+                    default: fifo_count <= fifo_count;  // 00 or 11 (push+pop)
+                endcase
+            end
         end
     end
 
@@ -616,6 +717,12 @@ module core_group #(
 
     always @(posedge clk) begin
         if (!rst_n) begin
+            out_spike_valid     <= 1'b0;
+            out_spike_neuron_id <= {LOCAL_ID_WIDTH{1'b0}};
+            out_fifo_wr_ptr     <= {FIFO_IDX_WIDTH{1'b0}};
+            out_fifo_rd_ptr     <= {FIFO_IDX_WIDTH{1'b0}};
+            out_fifo_count      <= {(FIFO_IDX_WIDTH+1){1'b0}};
+        end else if (sample_clear) begin
             out_spike_valid     <= 1'b0;
             out_spike_neuron_id <= {LOCAL_ID_WIDTH{1'b0}};
             out_fifo_wr_ptr     <= {FIFO_IDX_WIDTH{1'b0}};

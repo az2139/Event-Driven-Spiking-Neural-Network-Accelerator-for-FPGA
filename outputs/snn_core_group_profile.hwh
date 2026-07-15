@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
-<EDKSYSTEM EDWVERSION="1.2" TIMESTAMP="Wed Jun 24 18:52:49 2026" VIVADOVERSION="2025.2">
+<EDKSYSTEM EDWVERSION="1.2" TIMESTAMP="Mon Jul  6 10:10:08 2026" VIVADOVERSION="2025.2">
 
   <SYSTEMINFO ARCH="zynq" DEVICE="7z020" NAME="design_1" PACKAGE="clg400" SPEEDGRADE="-2"/>
 
@@ -5606,7 +5606,7 @@
         </BUSINTERFACE>
       </BUSINTERFACES>
     </MODULE>
-    <MODULE COREREVISION="2114640535" FULLNAME="/snn_top_hls_0" HWVERSION="1.0" INSTANCE="snn_top_hls_0" IPTYPE="PERIPHERAL" IS_ENABLE="1" MODCLASS="PERIPHERAL" MODTYPE="snn_inference_profile_hls" VLNV="xilinx.com:hls:snn_inference_profile_hls:1.0">
+    <MODULE COREREVISION="2114678343" FULLNAME="/snn_top_hls_0" HWVERSION="1.0" INSTANCE="snn_top_hls_0" IPTYPE="PERIPHERAL" IS_ENABLE="1" MODCLASS="PERIPHERAL" MODTYPE="snn_inference_profile_hls" VLNV="xilinx.com:hls:snn_inference_profile_hls:1.0">
       <DOCUMENTS/>
       <ADDRESSBLOCKS>
         <ADDRESSBLOCK ACCESS="read-write" INTERFACE="s_axi_ctrl" NAME="Reg" RANGE="65536" USAGE="register">

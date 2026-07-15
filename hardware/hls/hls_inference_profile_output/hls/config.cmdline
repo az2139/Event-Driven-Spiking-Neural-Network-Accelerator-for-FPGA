@@ -1,4 +1,4 @@
 part=xc7z020clg400-2
-relativeroot=/home/ym/xilinx_project/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls
+relativeroot=/home/ym/XilinxProj/Event-Driven-Spiking-Neural-Network-Accelerator-for-FPGA/hardware/hls
 original_argv=-c --mode hls --part xc7z020clg400-2 --config scripts/snn_inference_profile_hls_vpp.cfg --work_dir hls_inference_profile_output 
 
